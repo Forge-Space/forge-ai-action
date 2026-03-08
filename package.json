@@ -1,6 +1,6 @@
 {
   "name": "forge-ai-action",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "Forge AI — Quality Gates for AI-Assisted Code",
   "type": "module",
@@ -28,7 +28,7 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/github": "^6.0.0",
-    "forge-ai-init": "^0.19.0"
+    "forge-ai-init": "^0.20.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

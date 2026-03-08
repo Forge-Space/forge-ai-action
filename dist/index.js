@@ -32502,6 +32502,135 @@ var RULES = [
     rule: "python-time-sleep",
     message: "time.sleep() blocks the event loop \u2014 use asyncio.sleep in async code",
     extensions: [".py"]
+  },
+  // --- Benchmark-derived rules (Phase 1: Quality Gate Calibration) ---
+  // Source: DevQualityEval, AICGSecEval (CWE-22), AI Code Review CLI
+  {
+    pattern: /(?:readFile|readFileSync|createReadStream|open)\s*\([^)]*(?:\.\.\/?|req\.\w+|params\.\w+|query\.\w+)/g,
+    category: "security",
+    severity: "critical",
+    rule: "path-traversal",
+    message: "Path traversal risk (CWE-22) \u2014 validate and sanitize file paths",
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
+  },
+  {
+    pattern: /(?:fetch|axios\.(?:get|post|put|delete)|got|request)\s*\(\s*(?:req\.|params\.|query\.|args\.|user)/g,
+    category: "security",
+    severity: "high",
+    rule: "ssrf-risk",
+    message: "SSRF risk (CWE-918) \u2014 validate URLs against an allowlist",
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
+  },
+  {
+    pattern: /__proto__|Object\.assign\s*\(\s*\w+\s*,\s*(?:req\.|body\.|params\.|input)/g,
+    category: "security",
+    severity: "critical",
+    rule: "prototype-pollution",
+    message: "Prototype pollution risk \u2014 sanitize untrusted objects before merging",
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
+  },
+  {
+    pattern: /Math\.random\s*\(\)/g,
+    category: "security",
+    severity: "medium",
+    rule: "insecure-random",
+    message: "Math.random() is not cryptographically secure \u2014 use crypto.randomUUID() or crypto.getRandomValues()",
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
+  },
+  {
+    pattern: /jwt\.decode\s*\(/g,
+    category: "security",
+    severity: "high",
+    rule: "jwt-no-verify",
+    message: "jwt.decode() does not verify signature \u2014 use jwt.verify() instead",
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
+  },
+  {
+    pattern: /new\s+Function\s*\(/g,
+    category: "security",
+    severity: "critical",
+    rule: "new-function",
+    message: "new Function() enables code injection \u2014 use safe alternatives"
+  },
+  {
+    pattern: /\.catch\s*\(\s*\(\s*\)\s*=>\s*\{\s*\}\s*\)/g,
+    category: "error-handling",
+    severity: "high",
+    rule: "swallowed-promise",
+    message: "Empty .catch() swallows promise rejections silently",
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
+  },
+  {
+    pattern: /(?:res\.(?:json|send|status))\s*\([^)]*(?:err\.stack|error\.stack|\.stack|\.message)/g,
+    category: "security",
+    severity: "high",
+    rule: "error-info-leak",
+    message: "Error details in response leak internals \u2014 return generic messages to clients",
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]
+  },
+  {
+    pattern: /<button\b(?![^>]*(?:aria-label|aria-labelledby))[^>]*>\s*<(?:img|svg|icon)/gi,
+    category: "accessibility",
+    severity: "medium",
+    rule: "button-no-label",
+    message: "Icon-only button without aria-label \u2014 add accessible name",
+    extensions: [".tsx", ".jsx", ".vue", ".svelte"]
+  },
+  {
+    pattern: /<input\b(?![^>]*(?:aria-label|aria-labelledby|id\s*=))[^>]*\/?>/gi,
+    category: "accessibility",
+    severity: "medium",
+    rule: "input-no-label",
+    message: "Input without label association \u2014 add aria-label or matching <label htmlFor>",
+    extensions: [".tsx", ".jsx", ".vue", ".svelte"]
+  },
+  {
+    pattern: /requests\.(?:get|post|put|delete|patch)\s*\([^)]*verify\s*=\s*False/g,
+    category: "security",
+    severity: "high",
+    rule: "python-requests-no-verify",
+    message: "SSL verification disabled \u2014 man-in-the-middle attack risk",
+    extensions: [".py"]
+  },
+  {
+    pattern: /tempfile\.mktemp\s*\(/g,
+    category: "security",
+    severity: "high",
+    rule: "python-tempfile-insecure",
+    message: "tempfile.mktemp() has race condition \u2014 use mkstemp() or NamedTemporaryFile",
+    extensions: [".py"]
+  },
+  {
+    pattern: /Runtime\.getRuntime\(\)\.exec\s*\(/g,
+    category: "security",
+    severity: "critical",
+    rule: "java-runtime-exec",
+    message: "Runtime.exec() \u2014 command injection risk, use ProcessBuilder with argument list",
+    extensions: [".java"]
+  },
+  {
+    pattern: /GlobalScope\.launch\s*\{/g,
+    category: "scalability",
+    severity: "high",
+    rule: "kotlin-global-scope",
+    message: "GlobalScope.launch leaks coroutines \u2014 use structured concurrency (viewModelScope, lifecycleScope)",
+    extensions: [".kt", ".kts"]
+  },
+  {
+    pattern: /math\/rand/g,
+    category: "security",
+    severity: "medium",
+    rule: "go-insecure-rand",
+    message: "math/rand is predictable \u2014 use crypto/rand for security-sensitive operations",
+    extensions: [".go"]
+  },
+  {
+    pattern: /render_template_string\s*\(/g,
+    category: "security",
+    severity: "critical",
+    rule: "python-template-injection",
+    message: "render_template_string with user input enables SSTI (CWE-1336) \u2014 use render_template with files",
+    extensions: [".py"]
   }
 ];
 var CODE_EXTENSIONS = /* @__PURE__ */ new Set([
@@ -33160,7 +33289,7 @@ function walkFiles2(dir, max) {
     if (files.length >= max) return;
     let entries;
     try {
-      entries = readdirSync3(current);
+      entries = (0,external_fs_.readdirSync)(current);
     } catch {
       return;
     }
@@ -33169,12 +33298,12 @@ function walkFiles2(dir, max) {
       if (IGNORE_DIRS2.has(entry) || entry.startsWith(".")) {
         continue;
       }
-      const full = join4(current, entry);
+      const full = (0,external_path_.join)(current, entry);
       try {
-        const stat = statSync2(full);
+        const stat = (0,external_fs_.statSync)(full);
         if (stat.isDirectory()) {
           walk(full);
-        } else if (stat.isFile() && CODE_EXTENSIONS2.has(extname2(entry))) {
+        } else if (stat.isFile() && CODE_EXTENSIONS2.has((0,external_path_.extname)(entry))) {
           files.push(full);
         }
       } catch {
@@ -33187,7 +33316,7 @@ function walkFiles2(dir, max) {
 }
 function readJson(path) {
   try {
-    return JSON.parse(readFileSync4(path, "utf-8"));
+    return JSON.parse((0,external_fs_.readFileSync)(path, "utf-8"));
   } catch {
     return null;
   }
@@ -33201,7 +33330,7 @@ function scoreToGrade2(score) {
 }
 function collectDependencyFindings(dir, stack) {
   const findings = [];
-  const pkgPath = join4(dir, "package.json");
+  const pkgPath = (0,external_path_.join)(dir, "package.json");
   const pkg = readJson(pkgPath);
   if (!pkg) {
     if (stack.language === "javascript" || stack.language === "typescript") {
@@ -33265,7 +33394,7 @@ function collectDependencyFindings(dir, stack) {
       });
     }
   }
-  const hasLockfile = existsSync3(join4(dir, "package-lock.json")) || existsSync3(join4(dir, "yarn.lock")) || existsSync3(join4(dir, "pnpm-lock.yaml")) || existsSync3(join4(dir, "bun.lockb"));
+  const hasLockfile = (0,external_fs_.existsSync)((0,external_path_.join)(dir, "package-lock.json")) || (0,external_fs_.existsSync)((0,external_path_.join)(dir, "yarn.lock")) || (0,external_fs_.existsSync)((0,external_path_.join)(dir, "pnpm-lock.yaml")) || (0,external_fs_.existsSync)((0,external_path_.join)(dir, "bun.lockb"));
   if (!hasLockfile) {
     findings.push({
       category: "dependencies",
@@ -33299,11 +33428,11 @@ function collectArchitectureFindings(dir, files) {
   for (const file of files) {
     let content;
     try {
-      content = readFileSync4(file, "utf-8");
+      content = (0,external_fs_.readFileSync)(file, "utf-8");
     } catch {
       continue;
     }
-    const relPath = relative2(dir, file);
+    const relPath = (0,external_path_.relative)(dir, file);
     const lines = content.split("\n");
     const fnMatch = content.match(
       /(?:function\s+\w+|(?:export\s+)?(?:const|let)\s+\w+\s*=\s*(?:async\s*)?\(|def\s+\w+|func\s+\w+|fn\s+\w+)/g
@@ -33380,9 +33509,9 @@ function collectArchitectureFindings(dir, files) {
 }
 function collectSecurityFindings(dir, files) {
   const findings = [];
-  const gitignorePath = join4(dir, ".gitignore");
-  if (existsSync3(gitignorePath)) {
-    const gitignore = readFileSync4(gitignorePath, "utf-8");
+  const gitignorePath = (0,external_path_.join)(dir, ".gitignore");
+  if ((0,external_fs_.existsSync)(gitignorePath)) {
+    const gitignore = (0,external_fs_.readFileSync)(gitignorePath, "utf-8");
     if (!gitignore.includes(".env")) {
       findings.push({
         category: "security",
@@ -33452,11 +33581,11 @@ function collectSecurityFindings(dir, files) {
   for (const file of files) {
     let content;
     try {
-      content = readFileSync4(file, "utf-8");
+      content = (0,external_fs_.readFileSync)(file, "utf-8");
     } catch {
       continue;
     }
-    const relPath = relative2(dir, file);
+    const relPath = (0,external_path_.relative)(dir, file);
     for (const sp of secretPatterns) {
       const regex = new RegExp(sp.re.source, sp.re.flags);
       let match;
@@ -33487,7 +33616,7 @@ function collectSecurityFindings(dir, files) {
       }
     }
   }
-  if (!existsSync3(join4(dir, "SECURITY.md"))) {
+  if (!(0,external_fs_.existsSync)((0,external_path_.join)(dir, "SECURITY.md"))) {
     findings.push({
       category: "security",
       severity: "medium",
@@ -33509,7 +33638,7 @@ function collectQualityFindings(dir, stack, files) {
   } else {
     let testFileCount = 0;
     for (const file of files) {
-      const rel = relative2(dir, file);
+      const rel = (0,external_path_.relative)(dir, file);
       if (rel.includes(".test.") || rel.includes(".spec.") || rel.includes("__tests__/") || rel.includes("/test/") || rel.includes("/tests/")) {
         testFileCount++;
       }
@@ -33569,7 +33698,7 @@ function collectQualityFindings(dir, stack, files) {
   for (const file of files.slice(0, 200)) {
     let content;
     try {
-      content = readFileSync4(file, "utf-8");
+      content = (0,external_fs_.readFileSync)(file, "utf-8");
     } catch {
       continue;
     }
@@ -33605,7 +33734,7 @@ function collectMigrationReadiness(dir, stack, files) {
     ember: "Ember -> Next.js/Nuxt",
     knockout: "Knockout -> React/Vue"
   };
-  const pkgPath = join4(dir, "package.json");
+  const pkgPath = (0,external_path_.join)(dir, "package.json");
   const pkg = readJson(pkgPath);
   const allDeps = pkg ? {
     ...pkg["dependencies"] ?? {},
@@ -33647,7 +33776,7 @@ function collectMigrationReadiness(dir, stack, files) {
       detail: "CI pipeline needed to validate migration"
     });
   }
-  const hasDoc = existsSync3(join4(dir, "README.md")) || existsSync3(join4(dir, "ARCHITECTURE.md"));
+  const hasDoc = (0,external_fs_.existsSync)((0,external_path_.join)(dir, "README.md")) || (0,external_fs_.existsSync)((0,external_path_.join)(dir, "ARCHITECTURE.md"));
   if (!hasDoc) {
     findings.push({
       category: "migration-readiness",
@@ -33660,7 +33789,7 @@ function collectMigrationReadiness(dir, stack, files) {
   for (const file of files.slice(0, 200)) {
     let content;
     try {
-      content = readFileSync4(file, "utf-8");
+      content = (0,external_fs_.readFileSync)(file, "utf-8");
     } catch {
       continue;
     }
@@ -34870,23 +34999,23 @@ function analyzeTypingNeeds(dir) {
   function walk(current) {
     let entries;
     try {
-      entries = readdirSync5(current, { withFileTypes: true });
+      entries = (0,external_fs_.readdirSync)(current, { withFileTypes: true });
     } catch {
       return;
     }
     for (const entry of entries) {
       if (entry.isDirectory()) {
         if (!IGNORE_DIRS4.has(entry.name) && !entry.name.startsWith(".")) {
-          walk(join9(current, entry.name));
+          walk((0,external_path_.join)(current, entry.name));
         }
       } else {
-        const ext = extname4(entry.name);
+        const ext = (0,external_path_.extname)(entry.name);
         if (ext === ".js" || ext === ".jsx" || ext === ".mjs" || ext === ".cjs") {
-          const full = join9(current, entry.name);
+          const full = (0,external_path_.join)(current, entry.name);
           try {
-            const content = readFileSync6(full, "utf-8");
+            const content = (0,external_fs_.readFileSync)(full, "utf-8");
             const lines = content.split("\n").length;
-            jsFiles.push({ path: relative3(dir, full), lines });
+            jsFiles.push({ path: (0,external_path_.relative)(dir, full), lines });
           } catch {
           }
         }
@@ -34932,11 +35061,11 @@ function analyzeTypingNeeds(dir) {
 }
 function analyzeDependencyRisks(dir) {
   const risks = [];
-  const pkgPath = join9(dir, "package.json");
-  if (!existsSync8(pkgPath)) return [];
+  const pkgPath = (0,external_path_.join)(dir, "package.json");
+  if (!(0,external_fs_.existsSync)(pkgPath)) return [];
   let pkg;
   try {
-    pkg = JSON.parse(readFileSync6(pkgPath, "utf-8"));
+    pkg = JSON.parse((0,external_fs_.readFileSync)(pkgPath, "utf-8"));
   } catch {
     return [];
   }
@@ -35255,13 +35384,13 @@ function analyzeDiff(dir, opts = {}) {
 
 function readJson2(path) {
   try {
-    return JSON.parse(readFileSync7(path, "utf-8"));
+    return JSON.parse((0,external_fs_.readFileSync)(path, "utf-8"));
   } catch {
     return null;
   }
 }
 function fileExists2(dir, ...names) {
-  return names.some((n) => existsSync9(join10(dir, n)));
+  return names.some((n) => (0,external_fs_.existsSync)((0,external_path_.join)(dir, n)));
 }
 function collectWorkspaceDeps(dir, pkg) {
   const rootDeps = {
@@ -35272,14 +35401,14 @@ function collectWorkspaceDeps(dir, pkg) {
   if (!workspaces) return rootDeps;
   const patterns = Array.isArray(workspaces) ? workspaces : workspaces?.["packages"] ?? [];
   for (const pattern of patterns) {
-    const wsDir = join10(dir, pattern.replace("/*", ""));
-    if (!existsSync9(wsDir)) continue;
+    const wsDir = (0,external_path_.join)(dir, pattern.replace("/*", ""));
+    if (!(0,external_fs_.existsSync)(wsDir)) continue;
     try {
-      const entries = readdirSync6(wsDir, { withFileTypes: true });
+      const entries = (0,external_fs_.readdirSync)(wsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (!entry.isDirectory()) continue;
         const wsPkg = readJson2(
-          join10(wsDir, entry.name, "package.json")
+          (0,external_path_.join)(wsDir, entry.name, "package.json")
         );
         if (wsPkg) {
           Object.assign(
@@ -35295,13 +35424,13 @@ function collectWorkspaceDeps(dir, pkg) {
   return rootDeps;
 }
 function findFileRecursive(dir, name, maxDepth = 2) {
-  if (existsSync9(join10(dir, name))) return true;
+  if ((0,external_fs_.existsSync)((0,external_path_.join)(dir, name))) return true;
   if (maxDepth <= 0) return false;
   try {
-    const entries = readdirSync6(dir, { withFileTypes: true });
+    const entries = (0,external_fs_.readdirSync)(dir, { withFileTypes: true });
     for (const entry of entries) {
       if (entry.isDirectory() && !entry.name.startsWith(".") && entry.name !== "node_modules") {
-        if (findFileRecursive(join10(dir, entry.name), name, maxDepth - 1))
+        if (findFileRecursive((0,external_path_.join)(dir, entry.name), name, maxDepth - 1))
           return true;
       }
     }
@@ -35340,13 +35469,13 @@ function detectFramework(dir, deps) {
   if (deps["express"]) return "express";
   if (deps["react"] || deps["react-dom"]) return "react";
   if (fileExists2(dir, "pyproject.toml", "requirements.txt")) {
-    const content = existsSync9(join10(dir, "pyproject.toml")) ? readFileSync7(join10(dir, "pyproject.toml"), "utf-8") : existsSync9(join10(dir, "requirements.txt")) ? readFileSync7(join10(dir, "requirements.txt"), "utf-8") : "";
+    const content = (0,external_fs_.existsSync)((0,external_path_.join)(dir, "pyproject.toml")) ? (0,external_fs_.readFileSync)((0,external_path_.join)(dir, "pyproject.toml"), "utf-8") : (0,external_fs_.existsSync)((0,external_path_.join)(dir, "requirements.txt")) ? (0,external_fs_.readFileSync)((0,external_path_.join)(dir, "requirements.txt"), "utf-8") : "";
     if (content.includes("fastapi")) return "fastapi";
     if (content.includes("django")) return "django";
     if (content.includes("flask")) return "flask";
   }
   if (fileExists2(dir, "pom.xml")) {
-    const pom = readFileSync7(join10(dir, "pom.xml"), "utf-8");
+    const pom = (0,external_fs_.readFileSync)((0,external_path_.join)(dir, "pom.xml"), "utf-8");
     if (pom.includes("spring-boot")) return "spring";
   }
   return void 0;
@@ -35379,9 +35508,9 @@ function detectTestFramework(dir, deps) {
     return "playwright";
   if (deps["cypress"]) return "cypress";
   if (fileExists2(dir, "pytest.ini", "pyproject.toml", "setup.cfg")) {
-    const pyproject = join10(dir, "pyproject.toml");
-    if (existsSync9(pyproject)) {
-      const content = readFileSync7(pyproject, "utf-8");
+    const pyproject = (0,external_path_.join)(dir, "pyproject.toml");
+    if ((0,external_fs_.existsSync)(pyproject)) {
+      const content = (0,external_fs_.readFileSync)(pyproject, "utf-8");
       if (content.includes("[tool.pytest")) return "pytest";
     }
   }
@@ -35391,14 +35520,14 @@ function detectMonorepo(dir) {
   if (fileExists2(dir, "turbo.json", "nx.json", "lerna.json"))
     return true;
   if (fileExists2(dir, "pnpm-workspace.yaml")) return true;
-  const pkg = readJson2(join10(dir, "package.json"));
+  const pkg = readJson2((0,external_path_.join)(dir, "package.json"));
   if (pkg && pkg["workspaces"]) return true;
   return false;
 }
 function detectCIProvider(dir) {
-  if (existsSync9(join10(dir, ".github", "workflows"))) {
+  if ((0,external_fs_.existsSync)((0,external_path_.join)(dir, ".github", "workflows"))) {
     try {
-      const files = readdirSync6(join10(dir, ".github", "workflows"));
+      const files = (0,external_fs_.readdirSync)((0,external_path_.join)(dir, ".github", "workflows"));
       if (files.some((f) => f.endsWith(".yml") || f.endsWith(".yaml")))
         return "github-actions";
     } catch {
@@ -35435,7 +35564,7 @@ function detectCommands(pkg, language, packageManager) {
   return result;
 }
 function detectStack(projectDir) {
-  const pkg = readJson2(join10(projectDir, "package.json"));
+  const pkg = readJson2((0,external_path_.join)(projectDir, "package.json"));
   const deps = collectWorkspaceDeps(projectDir, pkg);
   const language = detectLanguage(projectDir);
   const packageManager = detectPackageManager(projectDir);
@@ -35732,6 +35861,114 @@ function runDiffCommand(cwd) {
     };
 }
 
+;// CONCATENATED MODULE: ./src/commands/assess.ts
+
+
+function runAssessCommand(cwd, threshold) {
+    const stack = detectStack(cwd);
+    const report = assessProject(cwd, stack);
+    const score = report.overallScore;
+    const grade = types_scoreToGrade(score);
+    const passed = score >= threshold;
+    const findings = report.findings.map((f) => ({
+        file: f.file ?? '',
+        rule: f.title,
+        severity: f.severity,
+        message: f.detail,
+        line: f.line,
+    }));
+    const categories = report.categories.map((c) => ({
+        name: c.category,
+        score: c.score,
+    }));
+    const readiness = report.migrationReadiness;
+    const strategy = report.migrationStrategy;
+    const summary = `Health: ${score}/100 (${grade}). ` +
+        `Readiness: ${readiness}. ` +
+        `Strategy: ${strategy}. ` +
+        `${findings.length} finding${findings.length === 1 ? '' : 's'}.`;
+    return {
+        score,
+        grade,
+        delta: 0,
+        passed,
+        findings,
+        categories,
+        summary,
+        migrationReadiness: readiness,
+        migrationStrategy: strategy,
+    };
+}
+
+;// CONCATENATED MODULE: ./src/commands/migrate.ts
+
+
+function runMigrateCommand(cwd, threshold) {
+    const stack = detectStack(cwd);
+    const report = assessProject(cwd, stack);
+    const plan = analyzeMigration(cwd, stack);
+    const score = report.overallScore;
+    const grade = types_scoreToGrade(score);
+    const passed = score >= threshold;
+    const findings = report.findings.map((f) => ({
+        file: f.file ?? '',
+        rule: f.title,
+        severity: f.severity,
+        message: f.detail,
+        line: f.line,
+    }));
+    const categories = report.categories.map((c) => ({
+        name: c.category,
+        score: c.score,
+    }));
+    const readiness = report.migrationReadiness;
+    const strategy = plan.strategy.name;
+    const summary = `Migration Assessment: ${score}/100 (${grade}). ` +
+        `Readiness: ${readiness}. ` +
+        `Strategy: ${strategy}. ` +
+        `${plan.phases.length} phases, ` +
+        `est. ${plan.estimatedEffort}.`;
+    return {
+        score,
+        grade,
+        delta: 0,
+        passed,
+        findings,
+        categories,
+        summary,
+        migrationReadiness: readiness,
+        migrationStrategy: strategy,
+        migrationPlan: {
+            strategy: plan.strategy.name,
+            strategyDescription: plan.strategy.description,
+            boundaries: plan.boundaries.slice(0, 10).map((b) => ({
+                module: b.module,
+                type: b.type,
+                complexity: b.complexity,
+                reason: b.reason,
+            })),
+            typingSteps: plan.typingPlan.slice(0, 10).map((s) => ({
+                file: s.file,
+                priority: s.priority,
+                reason: s.reason,
+            })),
+            dependencyRisks: plan.dependencyRisks.map((d) => ({
+                name: d.name,
+                issue: d.issue,
+                severity: d.severity,
+                recommendation: d.recommendation,
+            })),
+            phases: plan.phases.map((p) => ({
+                name: p.name,
+                description: p.description,
+                tasks: p.tasks,
+                gate: p.gate,
+            })),
+            estimatedEffort: plan.estimatedEffort,
+        },
+    };
+}
+
 ;// CONCATENATED MODULE: ./src/comment.ts
 const COMMENT_MARKER = '<!-- forge-ai-action -->';
 function escapeCell(text) {
@@ -35842,6 +36079,175 @@ async function postComment(octokit, context, result) {
         });
     }
 }
+const MIGRATE_MARKER = '<!-- forge-ai-migrate -->';
+function readinessIcon(readiness) {
+    switch (readiness) {
+        case 'ready':
+            return '\u2705';
+        case 'needs-work':
+            return '\u{1F7E1}';
+        case 'high-risk':
+            return '\u274C';
+        default:
+            return '\u2753';
+    }
+}
+function buildMigrateCommentBody(result) {
+    const plan = result.migrationPlan;
+    const rIcon = readinessIcon(result.migrationReadiness ?? '');
+    const gateIcon = result.passed ? '\u2705' : '\u274C';
+    const gateLabel = result.passed ? 'Passed' : 'Failed';
+    const lines = [MIGRATE_MARKER];
+    lines.push('## Forge AI Migration Assessment');
+    lines.push('');
+    lines.push(`${rIcon} **Readiness: ${result.migrationReadiness}** ` +
+        `&mdash; Score **${result.score}**/100 (${result.grade}) ` +
+        `&middot; ${gateIcon} Gate ${gateLabel}`);
+    lines.push('');
+    lines.push(`**Strategy:** ${plan.strategy}`);
+    lines.push(`> ${plan.strategyDescription}`);
+    lines.push('');
+    lines.push(`**Estimated Effort:** ${plan.estimatedEffort}`);
+    lines.push('');
+    if (result.categories.length > 0) {
+        lines.push('### Health Categories');
+        lines.push('');
+        lines.push('| Category | Score | Grade |');
+        lines.push('|----------|------:|:-----:|');
+        for (const c of result.categories) {
+            const g = comment_gradeFromScore(c.score);
+            const icon = c.score >= 75 ? '\u2705' : c.score >= 50 ? '\u{1F7E1}' : '\u274C';
+            lines.push(`| ${escapeCell(c.name)} | ${c.score} | ${icon} ${g} |`);
+        }
+        lines.push('');
+    }
+    if (plan.phases.length > 0) {
+        lines.push('<details open>');
+        lines.push(`<summary><strong>Migration Roadmap (${plan.phases.length} phases)</strong></summary>`);
+        lines.push('');
+        for (const phase of plan.phases) {
+            lines.push(`#### ${phase.name}`);
+            lines.push(`> ${phase.description}`);
+            lines.push('');
+            for (const task of phase.tasks) {
+                lines.push(`- [ ] ${task}`);
+            }
+            lines.push('');
+            lines.push(`**Quality Gate:** ${phase.gate}`);
+            lines.push('');
+        }
+        lines.push('</details>');
+        lines.push('');
+    }
+    if (plan.dependencyRisks.length > 0) {
+        lines.push('<details>');
+        lines.push(`<summary>Dependency risks (${plan.dependencyRisks.length})</summary>`);
+        lines.push('');
+        lines.push('| Package | Severity | Recommendation |');
+        lines.push('|---------|:--------:|----------------|');
+        for (const d of plan.dependencyRisks) {
+            const sev = severityBadge(d.severity);
+            lines.push(`| \`${escapeCell(d.name)}\` | ${sev} | ${escapeCell(d.recommendation)} |`);
+        }
+        lines.push('');
+        lines.push('</details>');
+        lines.push('');
+    }
+    if (plan.boundaries.length > 0) {
+        lines.push('<details>');
+        lines.push(`<summary>Strangler boundaries (${plan.boundaries.length})</summary>`);
+        lines.push('');
+        lines.push('| Module | Type | Complexity | Reason |');
+        lines.push('|--------|:----:|:----------:|--------|');
+        for (const b of plan.boundaries) {
+            lines.push(`| \`${escapeCell(b.module)}\` | ${b.type} | ${b.complexity} | ${escapeCell(truncate(b.reason, 60))} |`);
+        }
+        lines.push('');
+        lines.push('</details>');
+        lines.push('');
+    }
+    if (plan.typingSteps.length > 0) {
+        lines.push('<details>');
+        lines.push(`<summary>TypeScript migration (${plan.typingSteps.length} files)</summary>`);
+        lines.push('');
+        lines.push('| File | Priority | Reason |');
+        lines.push('|------|:--------:|--------|');
+        for (const s of plan.typingSteps) {
+            const icon = s.priority === 'high' ? '\u{1F534}' :
+                s.priority === 'medium' ? '\u{1F7E1}' : '\u{1F535}';
+            lines.push(`| \`${escapeCell(s.file)}\` | ${icon} ${s.priority} | ${escapeCell(truncate(s.reason, 60))} |`);
+        }
+        lines.push('');
+        lines.push('</details>');
+        lines.push('');
+    }
+    if (result.findings.length > 0) {
+        lines.push('<details>');
+        lines.push(`<summary>All findings (${result.findings.length})</summary>`);
+        lines.push('');
+        lines.push('| Severity | Issue | Detail |');
+        lines.push('|:--------:|-------|--------|');
+        const shown = result.findings.slice(0, 30);
+        for (const f of shown) {
+            const sev = severityBadge(f.severity);
+            lines.push(`| ${sev} | ${escapeCell(f.rule)} | ${escapeCell(truncate(f.message, 80))} |`);
+        }
+        if (result.findings.length > 30) {
+            lines.push('');
+            lines.push(`*\u2026and ${result.findings.length - 30} more.*`);
+        }
+        lines.push('');
+        lines.push('</details>');
+        lines.push('');
+    }
+    lines.push('---');
+    lines.push('<sub>Powered by ' +
+        '<a href="https://github.com/Forge-Space/forge-ai-action">Forge AI Action</a>' +
+        ' &middot; ' +
+        '<a href="https://forgespace.co">forgespace.co</a></sub>');
+    return lines.join('\n');
+}
+function comment_gradeFromScore(score) {
+    if (score >= 90)
+        return 'A';
+    if (score >= 75)
+        return 'B';
+    if (score >= 60)
+        return 'C';
+    if (score >= 40)
+        return 'D';
+    return 'F';
+}
+async function postMigrateComment(octokit, context, result) {
+    const pr = context.payload.pull_request;
+    if (!pr)
+        return;
+    const { owner, repo } = context.repo;
+    const issueNumber = pr.number;
+    const { data: comments } = await octokit.rest.issues.listComments({
+        owner,
+        repo,
+        issue_number: issueNumber,
+    });
+    const existing = comments.find((c) => c.body?.includes(MIGRATE_MARKER));
+    const body = buildMigrateCommentBody(result);
+    if (existing) {
+        await octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: existing.id,
+            body,
+        });
+    }
+    else {
+        await octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            body,
+        });
+    }
+}
 
 
 ;// CONCATENATED MODULE: ./src/annotations.ts
@@ -35885,6 +36291,8 @@ function addAnnotations(findings) {
 
 
 
+
+
 async function run() {
     try {
         const command = core.getInput('command') || 'gate';
@@ -35894,6 +36302,7 @@ async function run() {
         const cwd = process.cwd();
         core.info(`Forge AI — running "${command}" command`);
         let result;
+        let migrateResult;
         switch (command) {
             case 'gate':
                 result = runGateCommand(cwd, threshold);
@@ -35904,6 +36313,13 @@ async function run() {
             case 'diff':
                 result = runDiffCommand(cwd);
                 break;
+            case 'assess':
+                result = runAssessCommand(cwd, threshold);
+                break;
+            case 'migrate':
+                migrateResult = runMigrateCommand(cwd, threshold);
+                result = migrateResult;
+                break;
             default:
                 core.setFailed(`Unknown command: ${command}`);
                 return;
@@ -35912,17 +36328,32 @@ async function run() {
         core.setOutput('delta', result.delta.toString());
         core.setOutput('passed', result.passed.toString());
         core.setOutput('findings-count', result.findings.length.toString());
+        if (result.migrationReadiness) {
+            core.setOutput('readiness', result.migrationReadiness);
+        }
+        if (result.migrationStrategy) {
+            core.setOutput('strategy', result.migrationStrategy);
+        }
         core.info(`Score: ${result.score}/100 (${result.grade})`);
         core.info(`Delta: ${result.delta >= 0 ? '+' : ''}${result.delta}`);
         core.info(`Gate: ${result.passed ? 'PASSED' : 'FAILED'}`);
         core.info(`Findings: ${result.findings.length}`);
+        if (result.migrationReadiness) {
+            core.info(`Migration Readiness: ${result.migrationReadiness}`);
+            core.info(`Strategy: ${result.migrationStrategy}`);
+        }
         const token = process.env.GITHUB_TOKEN || core.getInput('token');
         const context = github.context;
         const isPR = !!context.payload.pull_request;
         if (isPR && token) {
             const octokit = github.getOctokit(token);
             if (shouldComment) {
-                await postComment(octokit, context, result);
+                if (migrateResult) {
+                    await postMigrateComment(octokit, context, migrateResult);
+                }
+                else {
+                    await postComment(octokit, context, result);
+                }
             }
             if (shouldAnnotate && result.findings.length > 0) {
                 addAnnotations(result.findings);
