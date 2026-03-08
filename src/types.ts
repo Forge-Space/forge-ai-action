@@ -19,6 +19,8 @@ export interface ActionResult {
   findings: ActionFinding[];
   categories: CategoryResult[];
   summary: string;
+  migrationReadiness?: string;
+  migrationStrategy?: string;
 }
 
 export function scoreToGrade(score: number): string {

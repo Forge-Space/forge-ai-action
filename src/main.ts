@@ -3,7 +3,9 @@ import * as github from '@actions/github';
 import { runGateCommand } from './commands/gate.js';
 import { runScanCommand } from './commands/scan.js';
 import { runDiffCommand } from './commands/diff.js';
-import { postComment } from './comment.js';
+import { runAssessCommand } from './commands/assess.js';
+import { runMigrateCommand, type MigrateResult } from './commands/migrate.js';
+import { postComment, postMigrateComment } from './comment.js';
 import { addAnnotations } from './annotations.js';
 import type { ActionResult } from './types.js';
 
@@ -18,6 +20,7 @@ async function run(): Promise<void> {
     core.info(`Forge AI — running "${command}" command`);
 
     let result: ActionResult;
+    let migrateResult: MigrateResult | undefined;
 
     switch (command) {
       case 'gate':
@@ -29,6 +32,13 @@ async function run(): Promise<void> {
       case 'diff':
         result = runDiffCommand(cwd);
         break;
+      case 'assess':
+        result = runAssessCommand(cwd, threshold);
+        break;
+      case 'migrate':
+        migrateResult = runMigrateCommand(cwd, threshold);
+        result = migrateResult;
+        break;
       default:
         core.setFailed(`Unknown command: ${command}`);
         return;
@@ -39,10 +49,22 @@ async function run(): Promise<void> {
     core.setOutput('passed', result.passed.toString());
     core.setOutput('findings-count', result.findings.length.toString());
 
+    if (result.migrationReadiness) {
+      core.setOutput('readiness', result.migrationReadiness);
+    }
+    if (result.migrationStrategy) {
+      core.setOutput('strategy', result.migrationStrategy);
+    }
+
     core.info(`Score: ${result.score}/100 (${result.grade})`);
     core.info(`Delta: ${result.delta >= 0 ? '+' : ''}${result.delta}`);
     core.info(`Gate: ${result.passed ? 'PASSED' : 'FAILED'}`);
     core.info(`Findings: ${result.findings.length}`);
+
+    if (result.migrationReadiness) {
+      core.info(`Migration Readiness: ${result.migrationReadiness}`);
+      core.info(`Strategy: ${result.migrationStrategy}`);
+    }
 
     const token = process.env.GITHUB_TOKEN || core.getInput('token');
     const context = github.context;
@@ -52,7 +74,11 @@ async function run(): Promise<void> {
       const octokit = github.getOctokit(token);
 
       if (shouldComment) {
-        await postComment(octokit, context, result);
+        if (migrateResult) {
+          await postMigrateComment(octokit, context, migrateResult);
+        } else {
+          await postComment(octokit, context, result);
+        }
       }
 
       if (shouldAnnotate && result.findings.length > 0) {

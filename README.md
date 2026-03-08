@@ -62,6 +62,31 @@ Show what changed compared to the base branch:
     command: diff
 ```
 
+### Health Assessment
+
+Run a full project health assessment (5 categories):
+
+```yaml
+- uses: Forge-Space/forge-ai-action@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    command: assess
+```
+
+### Migration Assessment
+
+Full migration toolkit — health assessment, strangler boundaries, TypeScript migration plan, dependency risks, and a phased roadmap with quality gates:
+
+```yaml
+- uses: Forge-Space/forge-ai-action@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    command: migrate
+    threshold: 40
+```
+
 ### Use Outputs
 
 ```yaml
@@ -69,18 +94,20 @@ Show what changed compared to the base branch:
   id: forge
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    command: migrate
 - run: |
     echo "Score: ${{ steps.forge.outputs.score }}"
-    echo "Delta: ${{ steps.forge.outputs.delta }}"
+    echo "Readiness: ${{ steps.forge.outputs.readiness }}"
+    echo "Strategy: ${{ steps.forge.outputs.strategy }}"
     echo "Passed: ${{ steps.forge.outputs.passed }}"
-    echo "Findings: ${{ steps.forge.outputs.findings-count }}"
 ```
 
 ## Inputs
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `command` | `gate` | Command: `gate`, `scan`, or `diff` |
+| `command` | `gate` | Command: `gate`, `scan`, `diff`, `assess`, or `migrate` |
 | `threshold` | `60` | Minimum score (0-100) for gate command |
 | `config` | auto | Path to `.forgerc.json` |
 | `comment` | `true` | Post PR comment with results |
@@ -94,10 +121,12 @@ Show what changed compared to the base branch:
 | `delta` | Score change vs base branch |
 | `passed` | Whether the gate passed (`true`/`false`) |
 | `findings-count` | Number of new findings |
+| `readiness` | Migration readiness: `ready`, `needs-work`, `high-risk` (assess/migrate) |
+| `strategy` | Recommended migration strategy (assess/migrate) |
 
 ## What It Scans
 
-89 rules across 10 categories:
+109 rules across 10 categories:
 
 - **Security** — hardcoded secrets, SQL injection, XSS, eval usage
 - **Architecture** — god files, circular deps, barrel file abuse
@@ -128,11 +157,16 @@ Create `.forgerc.json` in your repo root:
 
 ## How It Works
 
-1. Scans your codebase with [forge-ai-init](https://github.com/Forge-Space/forge-ai-init)'s 89-rule scanner
+1. Scans your codebase with [forge-ai-init](https://github.com/Forge-Space/forge-ai-init)'s 109-rule scanner
 2. Compares against the base branch to compute quality delta
 3. Posts a PR comment with score, grade, findings, and category breakdown
 4. Adds inline annotations on files with issues
 5. Sets a pass/fail status check based on your threshold
+
+For `migrate` command, it additionally:
+6. Assesses project health across 5 categories (deps, architecture, security, quality, migration-readiness)
+7. Generates a phased migration roadmap with quality gates per phase
+8. Identifies strangler boundaries, dependency risks, and TypeScript migration candidates
 
 ## License
 
