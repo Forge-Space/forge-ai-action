@@ -35,25 +35,27 @@ describe('buildCommentBody', () => {
 
   it('shows positive delta with plus sign', () => {
     const body = buildCommentBody(makeResult({ delta: 5 }));
-    expect(body).toContain('**+5** vs base');
+    expect(body).toContain('**+5**');
   });
 
   it('shows negative delta without plus sign', () => {
     const body = buildCommentBody(makeResult({ delta: -3 }));
-    expect(body).toContain('**-3** vs base');
+    expect(body).toContain('**-3**');
   });
 
   it('shows pass icon when passed', () => {
     const body = buildCommentBody(makeResult({ passed: true }));
-    expect(body).toContain('\u2705 Passed');
+    expect(body).toContain('\u2705');
+    expect(body).toContain('**Passed**');
   });
 
   it('shows fail icon when failed', () => {
     const body = buildCommentBody(makeResult({ passed: false }));
-    expect(body).toContain('\u274C Failed');
+    expect(body).toContain('\u274C');
+    expect(body).toContain('**Failed**');
   });
 
-  it('renders findings table', () => {
+  it('renders findings in details block', () => {
     const body = buildCommentBody(
       makeResult({
         findings: [
@@ -66,36 +68,41 @@ describe('buildCommentBody', () => {
         ],
       }),
     );
-    expect(body).toContain('### New Findings');
-    expect(body).toContain('empty-catch');
+    expect(body).toContain('<details open>');
+    expect(body).toContain('New findings');
+    expect(body).toContain('`empty-catch`');
     expect(body).toContain('`src/api.ts`');
   });
 
-  it('truncates findings at 20', () => {
-    const findings = Array.from({ length: 25 }, (_, i) => ({
+  it('truncates findings at 25', () => {
+    const findings = Array.from({ length: 30 }, (_, i) => ({
       file: `src/file${i}.ts`,
       rule: 'test-rule',
       severity: 'low',
       message: `Finding ${i}`,
     }));
     const body = buildCommentBody(makeResult({ findings }));
-    expect(body).toContain('...and 5 more findings');
+    expect(body).toContain('and 5 more findings');
   });
 
-  it('renders category scores', () => {
+  it('renders category scores in collapsible table', () => {
     const body = buildCommentBody(makeResult());
-    expect(body).toContain('`security: 92`');
-    expect(body).toContain('`architecture: 85`');
+    expect(body).toContain('<details>');
+    expect(body).toContain('Category scores');
+    expect(body).toContain('security');
+    expect(body).toContain('92');
+    expect(body).toContain('architecture');
+    expect(body).toContain('85');
   });
 
   it('hides findings section when empty', () => {
     const body = buildCommentBody(makeResult({ findings: [] }));
-    expect(body).not.toContain('### New Findings');
+    expect(body).not.toContain('New findings');
   });
 
   it('includes footer links', () => {
     const body = buildCommentBody(makeResult());
-    expect(body).toContain('forge-ai-init');
+    expect(body).toContain('forge-ai-action');
     expect(body).toContain('forgespace.co');
   });
 
@@ -114,5 +121,40 @@ describe('buildCommentBody', () => {
       }),
     );
     expect(body).toContain('`src/api.ts:42`');
+  });
+
+  it('escapes pipe characters in messages', () => {
+    const body = buildCommentBody(
+      makeResult({
+        findings: [
+          {
+            file: 'src/index.ts',
+            rule: 'no-any',
+            severity: 'high',
+            message: 'Type A | B should use union',
+          },
+        ],
+      }),
+    );
+    expect(body).toContain('Type A \\| B should use union');
+    expect(body).not.toMatch(/\| Type A \| B/);
+  });
+
+  it('truncates long messages', () => {
+    const longMessage = 'A'.repeat(120);
+    const body = buildCommentBody(
+      makeResult({
+        findings: [
+          {
+            file: 'src/index.ts',
+            rule: 'test',
+            severity: 'low',
+            message: longMessage,
+          },
+        ],
+      }),
+    );
+    expect(body).toContain('\u2026');
+    expect(body).not.toContain(longMessage);
   });
 });
