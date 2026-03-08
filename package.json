@@ -1,0 +1,42 @@
+{
+  "name": "forge-ai-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Forge AI — Quality Gates for AI-Assisted Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/main.ts -o dist --source-map --license licenses.txt",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "lint": "eslint src/",
+    "package": "npm run build && git add dist/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Forge-Space/forge-ai-action.git"
+  },
+  "keywords": [
+    "github-action",
+    "quality-gate",
+    "ai-governance",
+    "code-quality",
+    "forge-space"
+  ],
+  "author": "Forge Space",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
+    "forge-ai-init": "^0.19.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.13.0",
+    "@vercel/ncc": "^0.38.3",
+    "jest": "^30.0.0-beta.3",
+    "ts-jest": "^29.3.2",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.56.1"
+  }
+}
