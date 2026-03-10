@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Tenant context is now mandatory for all action commands:
+  - `tenant`
+  - `tenant_profile_ref`
+- Added tenant profile loader/validator with fail-fast behavior on missing, invalid,
+  or mismatched profile data.
+- `test-autogen-check` now forwards tenant context to `forge-ai-init`.
+
 ## v1.2.0 (2026-03-10)
 
 ### Features

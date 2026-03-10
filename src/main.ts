@@ -8,6 +8,7 @@ import { runMigrateCommand, type MigrateResult } from './commands/migrate.js';
 import { runTestAutogenCheckCommand } from './commands/test-autogen.js';
 import { postComment, postMigrateComment } from './comment.js';
 import { addAnnotations } from './annotations.js';
+import { resolveTenantContext } from './tenant.js';
 import type { ActionResult } from './types.js';
 
 async function run(): Promise<void> {
@@ -18,8 +19,17 @@ async function run(): Promise<void> {
     const shouldAnnotate = core.getInput('annotations') !== 'false';
     const testAutogenPhase = core.getInput('test_autogen_phase') || 'warn';
     const cwd = process.cwd();
+    const tenantContext = resolveTenantContext(
+      cwd,
+      core.getInput('tenant'),
+      core.getInput('tenant_profile_ref'),
+    );
+
+    process.env.FORGE_TENANT_ID = tenantContext.tenantId;
+    process.env.FORGE_TENANT_PROFILE_REF = tenantContext.profilePath;
 
     core.info(`Forge AI — running "${command}" command`);
+    core.info(`Tenant: ${tenantContext.tenantId}`);
 
     let result: ActionResult;
     let migrateResult: MigrateResult | undefined;
@@ -42,7 +52,12 @@ async function run(): Promise<void> {
         result = migrateResult;
         break;
       case 'test-autogen-check':
-        result = runTestAutogenCheckCommand(cwd, testAutogenPhase);
+        result = runTestAutogenCheckCommand(
+          cwd,
+          testAutogenPhase,
+          tenantContext.tenantId,
+          tenantContext.profilePath,
+        );
         break;
       default:
         core.setFailed(`Unknown command: ${command}`);

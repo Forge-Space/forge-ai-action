@@ -10,9 +10,15 @@ The only GitHub Action that measures whether AI is helping or hurting your codeb
 - uses: Forge-Space/forge-ai-action@v1
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    tenant: ${{ vars.FORGE_TENANT_ID }}
+    tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
 ```
 
 That's it. Every PR gets a quality report with score, delta, findings, and a pass/fail gate.
+
+`tenant_profile_ref` must point to a profile file present in the runner workspace
+(for example, checked out from `Forge-Space/forge-tenant-profiles`).
 
 ## Usage
 
@@ -35,6 +41,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          tenant: ${{ vars.FORGE_TENANT_ID }}
+          tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
           threshold: 75
 ```
 
@@ -47,6 +55,8 @@ Report quality without blocking:
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
+    tenant: ${{ vars.FORGE_TENANT_ID }}
+    tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
     command: scan
 ```
 
@@ -59,6 +69,8 @@ Show what changed compared to the base branch:
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
+    tenant: ${{ vars.FORGE_TENANT_ID }}
+    tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
     command: diff
 ```
 
@@ -71,6 +83,8 @@ Run a full project health assessment (5 categories):
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
+    tenant: ${{ vars.FORGE_TENANT_ID }}
+    tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
     command: assess
 ```
 
@@ -83,6 +97,8 @@ Full migration toolkit — health assessment, strangler boundaries, TypeScript m
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
+    tenant: ${{ vars.FORGE_TENANT_ID }}
+    tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
     command: migrate
     threshold: 40
 ```
@@ -96,6 +112,8 @@ Validate whether changed production files have required generated tests.
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
+    tenant: ${{ vars.FORGE_TENANT_ID }}
+    tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
     command: test-autogen-check
     test_autogen_phase: phase1
 ```
@@ -112,6 +130,8 @@ Sonar analysis is configured via `sonar-project.properties` to ignore generated 
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   with:
+    tenant: ${{ vars.FORGE_TENANT_ID }}
+    tenant_profile_ref: ${{ vars.FORGE_TENANT_PROFILE_REF }}
     command: migrate
 - run: |
     echo "Score: ${{ steps.forge.outputs.score }}"
@@ -124,6 +144,8 @@ Sonar analysis is configured via `sonar-project.properties` to ignore generated 
 
 | Input | Default | Description |
 |-------|---------|-------------|
+| `tenant` | - | Tenant identifier (must match `tenant_id` in profile) |
+| `tenant_profile_ref` | - | Path to tenant profile file (yaml/json) available in workspace |
 | `command` | `gate` | Command: `gate`, `scan`, `diff`, `assess`, `migrate`, or `test-autogen-check` |
 | `threshold` | `60` | Minimum score (0-100) for gate command |
 | `config` | auto | Path to `.forgerc.json` |
