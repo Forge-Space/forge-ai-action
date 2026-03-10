@@ -1,6 +1,8 @@
 import { jest } from '@jest/globals';
 
 const PROJECT_DIR = '/workspace/project';
+const TENANT_ID = 'acme-sandbox';
+const PROFILE_REF = '/workspace/tenant-profiles/tenants/acme-sandbox/profile.yaml';
 const mockExecFileSync = jest.fn();
 
 jest.unstable_mockModule('node:child_process', () => ({
@@ -28,7 +30,12 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'warn');
+    const result = runTestAutogenCheckCommand(
+      PROJECT_DIR,
+      'warn',
+      TENANT_ID,
+      PROFILE_REF,
+    );
 
     expect(result.passed).toBe(true);
     expect(result.findings.length).toBe(1);
@@ -49,7 +56,12 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'phase1');
+    const result = runTestAutogenCheckCommand(
+      PROJECT_DIR,
+      'phase1',
+      TENANT_ID,
+      PROFILE_REF,
+    );
 
     expect(result.passed).toBe(false);
     expect(result.summary).toContain('blocking 1');
@@ -66,7 +78,12 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'phase2');
+    const result = runTestAutogenCheckCommand(
+      PROJECT_DIR,
+      'phase2',
+      TENANT_ID,
+      PROFILE_REF,
+    );
 
     expect(result.passed).toBe(false);
     expect(result.findings[0]?.severity).toBe('medium');
@@ -84,11 +101,18 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    runTestAutogenCheckCommand(PROJECT_DIR, 'warn');
+    runTestAutogenCheckCommand(PROJECT_DIR, 'warn', TENANT_ID, PROFILE_REF);
 
     expect(mockExecFileSync).toHaveBeenCalledWith(
       expect.stringMatching(/npx(\.cmd)?$/),
-      expect.arrayContaining(['--base', 'origin/main']),
+      expect.arrayContaining([
+        '--tenant',
+        TENANT_ID,
+        '--tenant-profile-ref',
+        PROFILE_REF,
+        '--base',
+        'origin/main',
+      ]),
       expect.any(Object),
     );
   });
@@ -98,10 +122,21 @@ describe('runTestAutogenCheckCommand', () => {
       throw new Error('boom');
     });
 
-    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'phase2');
+    const result = runTestAutogenCheckCommand(
+      PROJECT_DIR,
+      'phase2',
+      TENANT_ID,
+      PROFILE_REF,
+    );
 
     expect(result.passed).toBe(false);
     expect(result.findings[0]?.rule).toBe('test-autogen-command-failed');
     expect(result.findings[0]?.severity).toBe('critical');
+  });
+
+  it('fails when tenant context is missing', () => {
+    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'warn');
+    expect(result.passed).toBe(false);
+    expect(result.findings[0]?.rule).toBe('tenant-context-missing');
   });
 });

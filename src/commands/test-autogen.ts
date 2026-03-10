@@ -37,8 +37,21 @@ function shouldBlock(path: string, phase: PhaseMode): boolean {
   return true;
 }
 
-function buildCommandArgs(baseRef?: string): string[] {
-  const args = ['forge-ai-init', 'test-autogen', '--check', '--json'];
+function buildCommandArgs(
+  tenantId: string,
+  profileRef: string,
+  baseRef?: string,
+): string[] {
+  const args = [
+    'forge-ai-init',
+    'test-autogen',
+    '--check',
+    '--json',
+    '--tenant',
+    tenantId,
+    '--tenant-profile-ref',
+    profileRef,
+  ];
   if (baseRef) {
     args.push('--base', baseRef);
   }
@@ -227,7 +240,28 @@ function buildFallbackResult(cwd: string, baseRef?: string): RawAutogenResult {
 export function runTestAutogenCheckCommand(
   cwd: string,
   phaseInput?: string,
+  tenantId?: string,
+  profileRef?: string,
 ): ActionResult {
+  if (!tenantId || !profileRef) {
+    return {
+      score: 0,
+      grade: 'F',
+      delta: 0,
+      passed: false,
+      findings: [
+        {
+          file: '',
+          rule: 'tenant-context-missing',
+          severity: 'critical',
+          message: 'Missing tenant context: tenant and tenant_profile_ref are required.',
+        },
+      ],
+      categories: [{ name: 'test-autogen', score: 0 }],
+      summary: 'test-autogen command failed: tenant context is missing.',
+    };
+  }
+
   const phase = normalizePhase(phaseInput);
   const baseRef = resolveBaseRef();
 
@@ -235,11 +269,15 @@ export function runTestAutogenCheckCommand(
   let fallbackUsed = false;
 
   try {
-    const output = execFileSync(NPX_BIN, buildCommandArgs(baseRef), {
+    const output = execFileSync(
+      NPX_BIN,
+      buildCommandArgs(tenantId, profileRef, baseRef),
+      {
       cwd,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'],
-    });
+      },
+    );
     rawResult = safeParseResult(output);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'test-autogen execution failed';

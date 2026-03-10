@@ -36058,8 +36058,17 @@ function shouldBlock(path, phase) {
         return !isE2EMissing(path);
     return true;
 }
-function buildCommandArgs(baseRef) {
-    const args = ['forge-ai-init', 'test-autogen', '--check', '--json'];
+function buildCommandArgs(tenantId, profileRef, baseRef) {
+    const args = [
+        'forge-ai-init',
+        'test-autogen',
+        '--check',
+        '--json',
+        '--tenant',
+        tenantId,
+        '--tenant-profile-ref',
+        profileRef,
+    ];
     if (baseRef) {
         args.push('--base', baseRef);
     }
@@ -36217,13 +36226,31 @@ function buildFallbackResult(cwd, baseRef) {
         passed: missing.length === 0,
     };
 }
-function runTestAutogenCheckCommand(cwd, phaseInput) {
+function runTestAutogenCheckCommand(cwd, phaseInput, tenantId, profileRef) {
+    if (!tenantId || !profileRef) {
+        return {
+            score: 0,
+            grade: 'F',
+            delta: 0,
+            passed: false,
+            findings: [
+                {
+                    file: '',
+                    rule: 'tenant-context-missing',
+                    severity: 'critical',
+                    message: 'Missing tenant context: tenant and tenant_profile_ref are required.',
+                },
+            ],
+            categories: [{ name: 'test-autogen', score: 0 }],
+            summary: 'test-autogen command failed: tenant context is missing.',
+        };
+    }
     const phase = normalizePhase(phaseInput);
     const baseRef = resolveBaseRef();
     let rawResult;
     let fallbackUsed = false;
     try {
-        const output = (0,external_node_child_process_namespaceObject.execFileSync)(NPX_BIN, buildCommandArgs(baseRef), {
+        const output = (0,external_node_child_process_namespaceObject.execFileSync)(NPX_BIN, buildCommandArgs(tenantId, profileRef, baseRef), {
             cwd,
             encoding: 'utf-8',
             stdio: ['ignore', 'pipe', 'pipe'],
@@ -36588,7 +36615,140 @@ function addAnnotations(findings) {
     }
 }
 
+;// CONCATENATED MODULE: ./src/tenant.ts
+
+
+function isRecord(value) {
+    return typeof value === 'object' && value !== null;
+}
+function parseScalar(value) {
+    const normalized = value.trim();
+    if (normalized === 'true')
+        return true;
+    if (normalized === 'false')
+        return false;
+    if (/^-?\d+(\.\d+)?$/.test(normalized))
+        return Number(normalized);
+    if ((normalized.startsWith('"') && normalized.endsWith('"')) ||
+        (normalized.startsWith("'") && normalized.endsWith("'"))) {
+        return normalized.slice(1, -1);
+    }
+    return normalized;
+}
+function stripInlineComment(line) {
+    const marker = line.indexOf(' #');
+    if (marker < 0)
+        return line;
+    return line.slice(0, marker);
+}
+function isSimpleYamlKey(key) {
+    if (!key)
+        return false;
+    for (const char of key) {
+        const code = char.charCodeAt(0);
+        const isAlphaNum = (code >= 48 && code <= 57) ||
+            (code >= 65 && code <= 90) ||
+            (code >= 97 && code <= 122);
+        if (!isAlphaNum && char !== '_' && char !== '.' && char !== '-')
+            return false;
+    }
+    return true;
+}
+function parseSimpleYamlLine(rawLine) {
+    const line = stripInlineComment(rawLine);
+    const trimmed = line.trimStart();
+    if (!trimmed)
+        return null;
+    const indent = line.length - trimmed.length;
+    const separator = trimmed.indexOf(':');
+    if (separator <= 0)
+        return null;
+    const key = trimmed.slice(0, separator).trim();
+    if (!isSimpleYamlKey(key))
+        return null;
+    const value = trimmed.slice(separator + 1).trim();
+    return { indent, key, value };
+}
+function parseSimpleYaml(content) {
+    const root = {};
+    const stack = [
+        { indent: -1, node: root },
+    ];
+    for (const rawLine of content.split('\n')) {
+        const parsedLine = parseSimpleYamlLine(rawLine);
+        if (!parsedLine)
+            continue;
+        const { indent, key, value } = parsedLine;
+        while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
+            stack.pop();
+        }
+        const parent = stack[stack.length - 1].node;
+        if (value.length === 0) {
+            const child = {};
+            parent[key] = child;
+            stack.push({ indent, node: child });
+            continue;
+        }
+        parent[key] = parseScalar(value);
+    }
+    return root;
+}
+function parseProfile(profilePath, content) {
+    const ext = (0,external_node_path_namespaceObject.extname)(profilePath).toLowerCase();
+    if (ext === '.json')
+        return JSON.parse(content);
+    if (ext === '.yml' || ext === '.yaml')
+        return parseSimpleYaml(content);
+    throw new Error(`Unsupported tenant profile format: ${ext}`);
+}
+function isTenantProfile(value) {
+    if (!isRecord(value))
+        return false;
+    return (typeof value['tenant_id'] === 'string' &&
+        typeof value['github_owner'] === 'string' &&
+        typeof value['sonar_org'] === 'string' &&
+        typeof value['npm_scope'] === 'string' &&
+        isRecord(value['quality_policy']) &&
+        isRecord(value['ci_policy']));
+}
+function resolveProfilePath(cwd, profileRef) {
+    const candidates = [(0,external_node_path_namespaceObject.resolve)(cwd, profileRef), (0,external_node_path_namespaceObject.resolve)(profileRef)];
+    for (const candidate of candidates) {
+        if (!(0,external_node_fs_namespaceObject.existsSync)(candidate))
+            continue;
+        if (!(0,external_node_fs_namespaceObject.statSync)(candidate).isFile())
+            continue;
+        return candidate;
+    }
+    throw new Error(`Tenant profile not found: ${profileRef}. Checkout the tenant profiles repo and pass a file path.`);
+}
+function requiredInput(value, name) {
+    const normalized = value.trim();
+    if (normalized.length > 0)
+        return normalized;
+    throw new Error(`Missing required input: ${name}.`);
+}
+function resolveTenantContext(cwd, tenantInput, profileRefInput) {
+    const tenantId = requiredInput(tenantInput, 'tenant');
+    const profileRef = requiredInput(profileRefInput, 'tenant_profile_ref');
+    const profilePath = resolveProfilePath(cwd, profileRef);
+    const parsed = parseProfile(profilePath, (0,external_node_fs_namespaceObject.readFileSync)(profilePath, 'utf-8'));
+    if (!isTenantProfile(parsed)) {
+        throw new Error('Invalid tenant profile: required keys are tenant_id, github_owner, sonar_org, npm_scope, quality_policy, ci_policy.');
+    }
+    if (parsed.tenant_id !== tenantId) {
+        throw new Error(`Tenant mismatch: input tenant=${tenantId} but profile tenant_id=${parsed.tenant_id}.`);
+    }
+    return {
+        tenantId,
+        profileRef,
+        profilePath,
+        profile: parsed,
+    };
+}
+
 ;// CONCATENATED MODULE: ./src/main.ts
+
 
 
 
@@ -36607,7 +36767,11 @@ async function run() {
         const shouldAnnotate = core.getInput('annotations') !== 'false';
         const testAutogenPhase = core.getInput('test_autogen_phase') || 'warn';
         const cwd = process.cwd();
+        const tenantContext = resolveTenantContext(cwd, core.getInput('tenant'), core.getInput('tenant_profile_ref'));
+        process.env.FORGE_TENANT_ID = tenantContext.tenantId;
+        process.env.FORGE_TENANT_PROFILE_REF = tenantContext.profilePath;
         core.info(`Forge AI — running "${command}" command`);
+        core.info(`Tenant: ${tenantContext.tenantId}`);
         let result;
         let migrateResult;
         switch (command) {
@@ -36628,7 +36792,7 @@ async function run() {
                 result = migrateResult;
                 break;
             case 'test-autogen-check':
-                result = runTestAutogenCheckCommand(cwd, testAutogenPhase);
+                result = runTestAutogenCheckCommand(cwd, testAutogenPhase, tenantContext.tenantId, tenantContext.profilePath);
                 break;
             default:
                 core.setFailed(`Unknown command: ${command}`);

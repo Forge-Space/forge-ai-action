@@ -7,6 +7,12 @@ branding:
   color: 'purple'
 
 inputs:
+  tenant:
+    description: 'Tenant identifier (must match tenant_id in tenant profile)'
+    required: true
+  tenant_profile_ref:
+    description: 'Path to tenant profile file (yaml/json) available in workspace'
+    required: true
   command:
     description: 'Command to run: gate (default), scan, diff, assess, migrate, test-autogen-check'
     required: false
