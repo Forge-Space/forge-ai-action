@@ -36635,21 +36635,50 @@ function parseScalar(value) {
     }
     return normalized;
 }
+function stripInlineComment(line) {
+    const marker = line.indexOf(' #');
+    if (marker < 0)
+        return line;
+    return line.slice(0, marker);
+}
+function isSimpleYamlKey(key) {
+    if (!key)
+        return false;
+    for (const char of key) {
+        const code = char.charCodeAt(0);
+        const isAlphaNum = (code >= 48 && code <= 57) ||
+            (code >= 65 && code <= 90) ||
+            (code >= 97 && code <= 122);
+        if (!isAlphaNum && char !== '_' && char !== '.' && char !== '-')
+            return false;
+    }
+    return true;
+}
+function parseSimpleYamlLine(rawLine) {
+    const line = stripInlineComment(rawLine);
+    const trimmed = line.trimStart();
+    if (!trimmed)
+        return null;
+    const indent = line.length - trimmed.length;
+    const separator = trimmed.indexOf(':');
+    if (separator <= 0)
+        return null;
+    const key = trimmed.slice(0, separator).trim();
+    if (!isSimpleYamlKey(key))
+        return null;
+    const value = trimmed.slice(separator + 1).trim();
+    return { indent, key, value };
+}
 function parseSimpleYaml(content) {
     const root = {};
     const stack = [
         { indent: -1, node: root },
     ];
     for (const rawLine of content.split('\n')) {
-        const line = rawLine.replace(/\s+#.*$/, '');
-        if (!line.trim())
+        const parsedLine = parseSimpleYamlLine(rawLine);
+        if (!parsedLine)
             continue;
-        const match = line.match(/^(\s*)([A-Za-z0-9_.-]+)\s*:\s*(.*)$/);
-        if (!match)
-            continue;
-        const indent = match[1]?.length ?? 0;
-        const key = match[2] ?? '';
-        const value = (match[3] ?? '').trim();
+        const { indent, key, value } = parsedLine;
         while (stack.length > 1 && indent <= stack[stack.length - 1].indent) {
             stack.pop();
         }

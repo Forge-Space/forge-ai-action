@@ -40,6 +40,21 @@ ci_policy:
   enforce_pr_checks: true
 `.trimStart();
 
+const PROFILE_YAML_WITH_COMMENTS = `
+tenant_id: acme-sandbox # tenant
+github_owner: acme-org
+sonar_org: acme-org
+npm_scope: "@acme"
+quality_policy:
+  min_quality_score: 80 # minimum score
+  block_on_critical: true
+  block_on_high: true
+ci_policy:
+  require_sonar: true
+  require_security_scan: true
+  enforce_pr_checks: true
+`.trimStart();
+
 describe('resolveTenantContext', () => {
   let dir = '';
 
@@ -54,6 +69,19 @@ describe('resolveTenantContext', () => {
 
     const context = resolveTenantContext(dir, 'acme-sandbox', profile);
     expect(context.profile.github_owner).toBe('acme-org');
+  });
+
+  it('loads a profile with inline comments', () => {
+    dir = createTempDir();
+    const profile = join(dir, 'profile-comments.yaml');
+    writeFileSync(profile, PROFILE_YAML_WITH_COMMENTS);
+
+    const context = resolveTenantContext(dir, 'acme-sandbox', profile);
+    expect(context.profile.quality_policy).toMatchObject({
+      min_quality_score: 80,
+      block_on_critical: true,
+      block_on_high: true,
+    });
   });
 
   it('fails on tenant mismatch', () => {

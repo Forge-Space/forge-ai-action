@@ -121,6 +121,8 @@ Validate whether changed production files have required generated tests.
 The command uses argument-based process execution and branch-safe diff-base detection for CI runners.
 
 Sonar analysis is configured via `sonar-project.properties` to ignore generated `dist/**` artifacts.
+Tenant profile parsing uses deterministic string-based YAML line parsing to avoid regex backtracking
+hotspots while preserving inline comment support.
 
 ### Use Outputs
 

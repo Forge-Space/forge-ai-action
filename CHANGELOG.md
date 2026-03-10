@@ -11,6 +11,12 @@
   or mismatched profile data.
 - `test-autogen-check` now forwards tenant context to `forge-ai-init`.
 
+### Fixed
+
+- Removed vulnerable regex parsing paths in `src/tenant.ts` by switching YAML line parsing to
+  deterministic string-based parsing helpers.
+- Added regression test coverage for YAML inline comments in tenant profiles.
+
 ## v1.2.0 (2026-03-10)
 
 ### Features
