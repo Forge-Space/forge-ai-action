@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import {
@@ -20,6 +20,16 @@ type PhaseMode = 'warn' | 'phase1' | 'phase2';
 
 type TestScope = 'unit' | 'integration' | 'e2e';
 
+const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+
+function sanitizeGitRef(ref?: string): string | undefined {
+  if (!ref) return undefined;
+  if (!SAFE_GIT_REF.test(ref)) return undefined;
+  if (ref.startsWith('-')) return undefined;
+  return ref;
+}
+
 function normalizePhase(input?: string): PhaseMode {
   if (input === 'phase1' || input === 'phase2') return input;
   return 'warn';
@@ -35,13 +45,16 @@ function shouldBlock(path: string, phase: PhaseMode): boolean {
   return true;
 }
 
-function buildCommand(baseRef?: string): string {
-  if (!baseRef) return 'npx forge-ai-init test-autogen --check --json';
-  return `npx forge-ai-init test-autogen --check --json --base ${baseRef}`;
+function buildCommandArgs(baseRef?: string): string[] {
+  const args = ['forge-ai-init', 'test-autogen', '--check', '--json'];
+  if (baseRef) {
+    args.push('--base', baseRef);
+  }
+  return args;
 }
 
 function resolveBaseRef(): string | undefined {
-  const baseRef = process.env.GITHUB_BASE_REF;
+  const baseRef = sanitizeGitRef(process.env.GITHUB_BASE_REF);
   if (!baseRef) return undefined;
   return `origin/${baseRef}`;
 }
@@ -82,11 +95,11 @@ function isFallbackEligible(message: string): boolean {
 }
 
 function runGitDiff(cwd: string, baseRef?: string): string[] {
-  const command = baseRef
-    ? `git diff --name-only ${baseRef}...HEAD`
-    : 'git diff --name-only HEAD';
+  const args = baseRef
+    ? ['diff', '--name-only', `${baseRef}...HEAD`]
+    : ['diff', '--name-only', 'HEAD'];
   try {
-    const output = execSync(command, {
+    const output = execFileSync('git', args, {
       cwd,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],
@@ -230,7 +243,7 @@ export function runTestAutogenCheckCommand(
   let fallbackUsed = false;
 
   try {
-    const output = execSync(buildCommand(baseRef), {
+    const output = execFileSync(NPX_BIN, buildCommandArgs(baseRef), {
       cwd,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'pipe'],

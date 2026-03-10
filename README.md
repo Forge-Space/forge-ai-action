@@ -100,6 +100,8 @@ Validate whether changed production files have required generated tests.
     test_autogen_phase: phase1
 ```
 
+The command uses argument-based process execution and branch-safe diff-base detection for CI runners.
+
 ### Use Outputs
 
 ```yaml

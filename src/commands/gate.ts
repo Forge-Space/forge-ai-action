@@ -1,4 +1,5 @@
 import { scanProject, analyzeDiff } from 'forge-ai-init';
+import { execFileSync } from 'node:child_process';
 import {
   scoreToGrade,
   type ActionResult,
@@ -6,12 +7,56 @@ import {
   type CategoryResult,
 } from '../types.js';
 
+const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+
+function sanitizeGitRef(ref?: string): string | undefined {
+  if (!ref) return undefined;
+  if (!SAFE_GIT_REF.test(ref)) return undefined;
+  if (ref.startsWith('-')) return undefined;
+  return ref;
+}
+
+function hasRef(cwd: string, ref: string): boolean {
+  try {
+    execFileSync('git', ['rev-parse', '--verify', '--quiet', ref], {
+      cwd,
+      stdio: ['ignore', 'ignore', 'ignore'],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveDiffBase(cwd: string): string {
+  const baseRef = sanitizeGitRef(process.env.GITHUB_BASE_REF);
+  const candidates = [
+    baseRef ? `origin/${baseRef}` : undefined,
+    baseRef,
+    'origin/main',
+    'main',
+    'HEAD~1',
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidates) {
+    if (hasRef(cwd, candidate)) {
+      return candidate;
+    }
+  }
+
+  return 'HEAD';
+}
+
 export function runGateCommand(
   cwd: string,
   threshold: number,
 ): ActionResult {
   const scan = scanProject(cwd);
-  const diff = analyzeDiff(cwd, { staged: false });
+  const diff = analyzeDiff(cwd, {
+    staged: false,
+    base: resolveDiffBase(cwd),
+    head: 'HEAD',
+  });
 
   const score = scan.score;
   const grade = scoreToGrade(score);

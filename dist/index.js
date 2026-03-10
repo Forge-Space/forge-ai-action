@@ -35738,6 +35738,8 @@ function writeReport(report, format, outputPath) {
 }
 
 //# sourceMappingURL=api.js.map
+;// CONCATENATED MODULE: external "node:child_process"
+const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
 ;// CONCATENATED MODULE: ./src/types.ts
 function types_scoreToGrade(score) {
     if (score >= 95)
@@ -35766,9 +35768,52 @@ function types_scoreToGrade(score) {
 ;// CONCATENATED MODULE: ./src/commands/gate.ts
 
 
+
+const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+function sanitizeGitRef(ref) {
+    if (!ref)
+        return undefined;
+    if (!SAFE_GIT_REF.test(ref))
+        return undefined;
+    if (ref.startsWith('-'))
+        return undefined;
+    return ref;
+}
+function hasRef(cwd, ref) {
+    try {
+        (0,external_node_child_process_namespaceObject.execFileSync)('git', ['rev-parse', '--verify', '--quiet', ref], {
+            cwd,
+            stdio: ['ignore', 'ignore', 'ignore'],
+        });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function resolveDiffBase(cwd) {
+    const baseRef = sanitizeGitRef(process.env.GITHUB_BASE_REF);
+    const candidates = [
+        baseRef ? `origin/${baseRef}` : undefined,
+        baseRef,
+        'origin/main',
+        'main',
+        'HEAD~1',
+    ].filter((candidate) => Boolean(candidate));
+    for (const candidate of candidates) {
+        if (hasRef(cwd, candidate)) {
+            return candidate;
+        }
+    }
+    return 'HEAD';
+}
 function runGateCommand(cwd, threshold) {
     const scan = scanProject(cwd);
-    const diff = analyzeDiff(cwd, { staged: false });
+    const diff = analyzeDiff(cwd, {
+        staged: false,
+        base: resolveDiffBase(cwd),
+        head: 'HEAD',
+    });
     const score = scan.score;
     const grade = types_scoreToGrade(score);
     const passed = score >= threshold;
@@ -35969,8 +36014,6 @@ function runMigrateCommand(cwd, threshold) {
     };
 }
 
-;// CONCATENATED MODULE: external "node:child_process"
-const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
 ;// CONCATENATED MODULE: external "node:fs"
 const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 ;// CONCATENATED MODULE: external "node:path"
@@ -35980,6 +36023,17 @@ const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(impo
 
 
 
+const test_autogen_SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+function test_autogen_sanitizeGitRef(ref) {
+    if (!ref)
+        return undefined;
+    if (!test_autogen_SAFE_GIT_REF.test(ref))
+        return undefined;
+    if (ref.startsWith('-'))
+        return undefined;
+    return ref;
+}
 function normalizePhase(input) {
     if (input === 'phase1' || input === 'phase2')
         return input;
@@ -35995,13 +36049,15 @@ function shouldBlock(path, phase) {
         return !isE2EMissing(path);
     return true;
 }
-function buildCommand(baseRef) {
-    if (!baseRef)
-        return 'npx forge-ai-init test-autogen --check --json';
-    return `npx forge-ai-init test-autogen --check --json --base ${baseRef}`;
+function buildCommandArgs(baseRef) {
+    const args = ['forge-ai-init', 'test-autogen', '--check', '--json'];
+    if (baseRef) {
+        args.push('--base', baseRef);
+    }
+    return args;
 }
 function resolveBaseRef() {
-    const baseRef = process.env.GITHUB_BASE_REF;
+    const baseRef = test_autogen_sanitizeGitRef(process.env.GITHUB_BASE_REF);
     if (!baseRef)
         return undefined;
     return `origin/${baseRef}`;
@@ -36036,11 +36092,11 @@ function isFallbackEligible(message) {
         message.includes('not found'));
 }
 function runGitDiff(cwd, baseRef) {
-    const command = baseRef
-        ? `git diff --name-only ${baseRef}...HEAD`
-        : 'git diff --name-only HEAD';
+    const args = baseRef
+        ? ['diff', '--name-only', `${baseRef}...HEAD`]
+        : ['diff', '--name-only', 'HEAD'];
     try {
-        const output = (0,external_node_child_process_namespaceObject.execSync)(command, {
+        const output = (0,external_node_child_process_namespaceObject.execFileSync)('git', args, {
             cwd,
             encoding: 'utf-8',
             stdio: ['ignore', 'pipe', 'ignore'],
@@ -36156,7 +36212,7 @@ function runTestAutogenCheckCommand(cwd, phaseInput) {
     let rawResult;
     let fallbackUsed = false;
     try {
-        const output = (0,external_node_child_process_namespaceObject.execSync)(buildCommand(baseRef), {
+        const output = (0,external_node_child_process_namespaceObject.execFileSync)(NPX_BIN, buildCommandArgs(baseRef), {
             cwd,
             encoding: 'utf-8',
             stdio: ['ignore', 'pipe', 'pipe'],

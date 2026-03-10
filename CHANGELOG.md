@@ -11,6 +11,11 @@
   - `phase2` (block missing unit/integration/e2e).
 - New PR findings support for missing required generated tests.
 
+### Fixed
+
+- Hardened command execution in `test-autogen-check` to avoid shell-based command injection patterns.
+- Improved `gate` base-ref resolution in CI to avoid failures when `main` is not available as a local branch.
+
 ## v1.1.0 (2026-03-08)
 
 ### Features

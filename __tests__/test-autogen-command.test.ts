@@ -1,9 +1,10 @@
 import { jest } from '@jest/globals';
 
-const mockExecSync = jest.fn();
+const PROJECT_DIR = '/workspace/project';
+const mockExecFileSync = jest.fn();
 
 jest.unstable_mockModule('node:child_process', () => ({
-  execSync: mockExecSync,
+  execFileSync: mockExecFileSync,
 }));
 
 const { runTestAutogenCheckCommand } = await import(
@@ -17,7 +18,7 @@ describe('runTestAutogenCheckCommand', () => {
   });
 
   it('passes in warn mode even with missing tests', () => {
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       JSON.stringify({
         changedFiles: ['src/api/users.ts'],
         requirements: [{}, {}],
@@ -27,7 +28,7 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    const result = runTestAutogenCheckCommand('/tmp/project', 'warn');
+    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'warn');
 
     expect(result.passed).toBe(true);
     expect(result.findings.length).toBe(1);
@@ -35,7 +36,7 @@ describe('runTestAutogenCheckCommand', () => {
   });
 
   it('blocks unit/integration gaps in phase1', () => {
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       JSON.stringify({
         changedFiles: ['src/api/users.ts'],
         requirements: [{}, {}],
@@ -48,14 +49,14 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    const result = runTestAutogenCheckCommand('/tmp/project', 'phase1');
+    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'phase1');
 
     expect(result.passed).toBe(false);
     expect(result.summary).toContain('blocking 1');
   });
 
   it('blocks e2e gaps in phase2', () => {
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       JSON.stringify({
         changedFiles: ['src/ui/login.tsx', 'src/api/login.ts'],
         requirements: [{}, {}, {}],
@@ -65,7 +66,7 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    const result = runTestAutogenCheckCommand('/tmp/project', 'phase2');
+    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'phase2');
 
     expect(result.passed).toBe(false);
     expect(result.findings[0]?.severity).toBe('medium');
@@ -73,7 +74,7 @@ describe('runTestAutogenCheckCommand', () => {
 
   it('uses base ref from GitHub environment when available', () => {
     process.env.GITHUB_BASE_REF = 'main';
-    mockExecSync.mockReturnValue(
+    mockExecFileSync.mockReturnValue(
       JSON.stringify({
         changedFiles: [],
         requirements: [],
@@ -83,20 +84,21 @@ describe('runTestAutogenCheckCommand', () => {
       }),
     );
 
-    runTestAutogenCheckCommand('/tmp/project', 'warn');
+    runTestAutogenCheckCommand(PROJECT_DIR, 'warn');
 
-    expect(mockExecSync).toHaveBeenCalledWith(
-      expect.stringContaining('--base origin/main'),
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      expect.stringMatching(/npx(\.cmd)?$/),
+      expect.arrayContaining(['--base', 'origin/main']),
       expect.any(Object),
     );
   });
 
   it('returns critical finding when command execution fails', () => {
-    mockExecSync.mockImplementation(() => {
+    mockExecFileSync.mockImplementation(() => {
       throw new Error('boom');
     });
 
-    const result = runTestAutogenCheckCommand('/tmp/project', 'phase2');
+    const result = runTestAutogenCheckCommand(PROJECT_DIR, 'phase2');
 
     expect(result.passed).toBe(false);
     expect(result.findings[0]?.rule).toBe('test-autogen-command-failed');
