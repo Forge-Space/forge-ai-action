@@ -102,6 +102,8 @@ Validate whether changed production files have required generated tests.
 
 The command uses argument-based process execution and branch-safe diff-base detection for CI runners.
 
+Sonar analysis is configured via `sonar-project.properties` to ignore generated `dist/**` artifacts.
+
 ### Use Outputs
 
 ```yaml
