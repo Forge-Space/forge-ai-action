@@ -8,7 +8,7 @@ branding:
 
 inputs:
   command:
-    description: 'Command to run: gate (default), scan, diff, assess, migrate'
+    description: 'Command to run: gate (default), scan, diff, assess, migrate, test-autogen-check'
     required: false
     default: 'gate'
   threshold:
@@ -27,6 +27,10 @@ inputs:
     description: 'Add inline file annotations for findings'
     required: false
     default: 'true'
+  test_autogen_phase:
+    description: 'Policy phase for test-autogen-check: warn, phase1, or phase2'
+    required: false
+    default: 'warn'
 
 outputs:
   score:

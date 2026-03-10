@@ -35969,6 +35969,244 @@ function runMigrateCommand(cwd, threshold) {
     };
 }
 
+;// CONCATENATED MODULE: external "node:child_process"
+const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+;// CONCATENATED MODULE: external "node:path"
+const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+;// CONCATENATED MODULE: ./src/commands/test-autogen.ts
+
+
+
+
+function normalizePhase(input) {
+    if (input === 'phase1' || input === 'phase2')
+        return input;
+    return 'warn';
+}
+function isE2EMissing(path) {
+    return path.includes('.e2e.') || path.includes('/e2e/');
+}
+function shouldBlock(path, phase) {
+    if (phase === 'warn')
+        return false;
+    if (phase === 'phase1')
+        return !isE2EMissing(path);
+    return true;
+}
+function buildCommand(baseRef) {
+    if (!baseRef)
+        return 'npx forge-ai-init test-autogen --check --json';
+    return `npx forge-ai-init test-autogen --check --json --base ${baseRef}`;
+}
+function resolveBaseRef() {
+    const baseRef = process.env.GITHUB_BASE_REF;
+    if (!baseRef)
+        return undefined;
+    return `origin/${baseRef}`;
+}
+function findingFromMissing(file) {
+    const e2e = isE2EMissing(file);
+    return {
+        file,
+        rule: e2e ? 'test-autogen-missing-e2e' : 'test-autogen-missing-required',
+        severity: e2e ? 'medium' : 'high',
+        message: `Required generated test is missing: ${file}`,
+    };
+}
+function safeParseResult(raw) {
+    const parsed = JSON.parse(raw);
+    return {
+        changedFiles: parsed.changedFiles ?? [],
+        requirements: parsed.requirements ?? [],
+        created: parsed.created ?? [],
+        missing: parsed.missing ?? [],
+        passed: parsed.passed ?? true,
+    };
+}
+function scoreFromMissing(missing, blocked) {
+    const score = 100 - missing.length * 8 - blocked.length * 20;
+    return Math.max(0, score);
+}
+function isFallbackEligible(message) {
+    return (message.includes('Unknown command') ||
+        message.includes('test-autogen') ||
+        message.includes('could not determine executable') ||
+        message.includes('not found'));
+}
+function runGitDiff(cwd, baseRef) {
+    const command = baseRef
+        ? `git diff --name-only ${baseRef}...HEAD`
+        : 'git diff --name-only HEAD';
+    try {
+        const output = (0,external_node_child_process_namespaceObject.execSync)(command, {
+            cwd,
+            encoding: 'utf-8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+        });
+        return output
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0);
+    }
+    catch {
+        return [];
+    }
+}
+function isTestLikeFile(path) {
+    return (path.includes('/tests/') ||
+        path.startsWith('tests/') ||
+        path.includes('__tests__') ||
+        path.endsWith('.test.ts') ||
+        path.endsWith('.test.tsx') ||
+        path.endsWith('.test.js') ||
+        path.endsWith('.spec.ts') ||
+        path.endsWith('.spec.js') ||
+        path.endsWith('_test.py'));
+}
+function isProdSource(path) {
+    if (isTestLikeFile(path))
+        return false;
+    if (path.startsWith('.'))
+        return false;
+    if (path.startsWith('docs/') || path.startsWith('.github/') || path.endsWith('.md')) {
+        return false;
+    }
+    const ext = (0,external_node_path_namespaceObject.extname)(path);
+    return ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.py'].includes(ext);
+}
+function isUiFile(path) {
+    const lower = path.toLowerCase();
+    const ext = (0,external_node_path_namespaceObject.extname)(lower);
+    if (['.tsx', '.jsx', '.vue', '.svelte'].includes(ext))
+        return true;
+    return (lower.includes('/ui/') ||
+        lower.includes('/components/') ||
+        lower.includes('/screens/') ||
+        lower.includes('/pages/') ||
+        lower.includes('/app/'));
+}
+function isApiFile(path) {
+    const lower = path.toLowerCase();
+    return (lower.includes('/api/') ||
+        lower.includes('/routes/') ||
+        lower.includes('/route') ||
+        lower.includes('/controller') ||
+        lower.includes('/service') ||
+        lower.includes('/repository') ||
+        lower.includes('/db') ||
+        lower.includes('/server'));
+}
+function isCriticalFlow(path) {
+    return /(auth|login|signup|checkout|payment|billing|security|admin)/i.test(path);
+}
+function stripExtension(path) {
+    return path.slice(0, path.length - (0,external_node_path_namespaceObject.extname)(path).length);
+}
+function testExt(cwd) {
+    return (0,external_node_fs_namespaceObject.existsSync)((0,external_node_path_namespaceObject.join)(cwd, 'tsconfig.json')) ? 'ts' : 'js';
+}
+function buildTestPath(cwd, source, scope) {
+    const ext = (0,external_node_path_namespaceObject.extname)(source) === '.py' ? 'py' : testExt(cwd);
+    const base = stripExtension(source);
+    if (ext === 'py') {
+        const normalized = base.replace(/\//g, '_');
+        return (0,external_node_path_namespaceObject.join)('tests', scope, `test_${normalized}.py`);
+    }
+    const suffix = scope === 'unit'
+        ? 'unit.test'
+        : scope === 'integration'
+            ? 'integration.test'
+            : 'e2e.test';
+    return (0,external_node_path_namespaceObject.join)('tests', scope, `${base}.${suffix}.${ext}`);
+}
+function buildFallbackResult(cwd, baseRef) {
+    const changedFiles = runGitDiff(cwd, baseRef).filter(isProdSource);
+    const requirements = [];
+    const missing = [];
+    const hasUi = changedFiles.some(isUiFile);
+    const hasApi = changedFiles.some(isApiFile);
+    for (const source of changedFiles) {
+        requirements.push(buildTestPath(cwd, source, 'unit'));
+        if (isApiFile(source)) {
+            requirements.push(buildTestPath(cwd, source, 'integration'));
+        }
+        const needsE2E = isCriticalFlow(source) || ((hasUi && hasApi) && (isUiFile(source) || isApiFile(source)));
+        if (needsE2E) {
+            requirements.push(buildTestPath(cwd, source, 'e2e'));
+        }
+    }
+    for (const req of requirements) {
+        if (!(0,external_node_fs_namespaceObject.existsSync)((0,external_node_path_namespaceObject.join)(cwd, req))) {
+            missing.push(req);
+        }
+    }
+    return {
+        changedFiles,
+        requirements,
+        created: [],
+        missing,
+        passed: missing.length === 0,
+    };
+}
+function runTestAutogenCheckCommand(cwd, phaseInput) {
+    const phase = normalizePhase(phaseInput);
+    const baseRef = resolveBaseRef();
+    let rawResult;
+    let fallbackUsed = false;
+    try {
+        const output = (0,external_node_child_process_namespaceObject.execSync)(buildCommand(baseRef), {
+            cwd,
+            encoding: 'utf-8',
+            stdio: ['ignore', 'pipe', 'pipe'],
+        });
+        rawResult = safeParseResult(output);
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'test-autogen execution failed';
+        if (!isFallbackEligible(message)) {
+            return {
+                score: 0,
+                grade: 'F',
+                delta: 0,
+                passed: false,
+                findings: [
+                    {
+                        file: '',
+                        rule: 'test-autogen-command-failed',
+                        severity: 'critical',
+                        message,
+                    },
+                ],
+                categories: [{ name: 'test-autogen', score: 0 }],
+                summary: `test-autogen command failed: ${message}`,
+            };
+        }
+        rawResult = buildFallbackResult(cwd, baseRef);
+        fallbackUsed = true;
+    }
+    const findings = rawResult.missing.map(findingFromMissing);
+    const blocked = rawResult.missing.filter((file) => shouldBlock(file, phase));
+    const score = scoreFromMissing(rawResult.missing, blocked);
+    const passed = blocked.length === 0;
+    const grade = types_scoreToGrade(score);
+    const categories = [{ name: 'test-autogen', score }];
+    const fallbackLabel = fallbackUsed ? ' (fallback)' : '';
+    const summary = `Test autogen${fallbackLabel} (${phase}) — changed ${rawResult.changedFiles.length}, ` +
+        `required ${rawResult.requirements.length}, missing ${rawResult.missing.length}, ` +
+        `blocking ${blocked.length}.`;
+    return {
+        score,
+        grade,
+        delta: 0,
+        passed,
+        findings,
+        categories,
+        summary,
+    };
+}
+
 ;// CONCATENATED MODULE: ./src/comment.ts
 const COMMENT_MARKER = '<!-- forge-ai-action -->';
 function escapeCell(text) {
@@ -36293,12 +36531,14 @@ function addAnnotations(findings) {
 
 
 
+
 async function run() {
     try {
         const command = core.getInput('command') || 'gate';
         const threshold = parseInt(core.getInput('threshold') || '60', 10);
         const shouldComment = core.getInput('comment') !== 'false';
         const shouldAnnotate = core.getInput('annotations') !== 'false';
+        const testAutogenPhase = core.getInput('test_autogen_phase') || 'warn';
         const cwd = process.cwd();
         core.info(`Forge AI — running "${command}" command`);
         let result;
@@ -36319,6 +36559,9 @@ async function run() {
             case 'migrate':
                 migrateResult = runMigrateCommand(cwd, threshold);
                 result = migrateResult;
+                break;
+            case 'test-autogen-check':
+                result = runTestAutogenCheckCommand(cwd, testAutogenPhase);
                 break;
             default:
                 core.setFailed(`Unknown command: ${command}`);
@@ -36360,7 +36603,10 @@ async function run() {
             }
         }
         if (!result.passed) {
-            core.setFailed(`Quality gate failed: score ${result.score} < threshold ${threshold}`);
+            const failureMessage = command === 'test-autogen-check'
+                ? `Test autogen check failed: ${result.summary}`
+                : `Quality gate failed: score ${result.score} < threshold ${threshold}`;
+            core.setFailed(failureMessage);
         }
     }
     catch (error) {

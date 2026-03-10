@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.2.0 (2026-03-10)
+
+### Features
+
+- Added `test-autogen-check` command for PR/CI parity with `forge-ai-init test-autogen`.
+- Added phased enforcement input `test_autogen_phase`:
+  - `warn` (non-blocking),
+  - `phase1` (block missing unit/integration),
+  - `phase2` (block missing unit/integration/e2e).
+- New PR findings support for missing required generated tests.
+
 ## v1.1.0 (2026-03-08)
 
 ### Features

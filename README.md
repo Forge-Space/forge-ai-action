@@ -87,6 +87,19 @@ Full migration toolkit — health assessment, strangler boundaries, TypeScript m
     threshold: 40
 ```
 
+### Test Autogen Check
+
+Validate whether changed production files have required generated tests.
+
+```yaml
+- uses: Forge-Space/forge-ai-action@v1
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  with:
+    command: test-autogen-check
+    test_autogen_phase: phase1
+```
+
 ### Use Outputs
 
 ```yaml
@@ -107,11 +120,12 @@ Full migration toolkit — health assessment, strangler boundaries, TypeScript m
 
 | Input | Default | Description |
 |-------|---------|-------------|
-| `command` | `gate` | Command: `gate`, `scan`, `diff`, `assess`, or `migrate` |
+| `command` | `gate` | Command: `gate`, `scan`, `diff`, `assess`, `migrate`, or `test-autogen-check` |
 | `threshold` | `60` | Minimum score (0-100) for gate command |
 | `config` | auto | Path to `.forgerc.json` |
 | `comment` | `true` | Post PR comment with results |
 | `annotations` | `true` | Add inline file annotations |
+| `test_autogen_phase` | `warn` | Enforcement phase for `test-autogen-check`: `warn`, `phase1`, `phase2` |
 
 ## Outputs
 

@@ -5,6 +5,7 @@ import { runScanCommand } from './commands/scan.js';
 import { runDiffCommand } from './commands/diff.js';
 import { runAssessCommand } from './commands/assess.js';
 import { runMigrateCommand, type MigrateResult } from './commands/migrate.js';
+import { runTestAutogenCheckCommand } from './commands/test-autogen.js';
 import { postComment, postMigrateComment } from './comment.js';
 import { addAnnotations } from './annotations.js';
 import type { ActionResult } from './types.js';
@@ -15,6 +16,7 @@ async function run(): Promise<void> {
     const threshold = parseInt(core.getInput('threshold') || '60', 10);
     const shouldComment = core.getInput('comment') !== 'false';
     const shouldAnnotate = core.getInput('annotations') !== 'false';
+    const testAutogenPhase = core.getInput('test_autogen_phase') || 'warn';
     const cwd = process.cwd();
 
     core.info(`Forge AI — running "${command}" command`);
@@ -38,6 +40,9 @@ async function run(): Promise<void> {
       case 'migrate':
         migrateResult = runMigrateCommand(cwd, threshold);
         result = migrateResult;
+        break;
+      case 'test-autogen-check':
+        result = runTestAutogenCheckCommand(cwd, testAutogenPhase);
         break;
       default:
         core.setFailed(`Unknown command: ${command}`);
@@ -87,9 +92,11 @@ async function run(): Promise<void> {
     }
 
     if (!result.passed) {
-      core.setFailed(
-        `Quality gate failed: score ${result.score} < threshold ${threshold}`,
-      );
+      const failureMessage =
+        command === 'test-autogen-check'
+          ? `Test autogen check failed: ${result.summary}`
+          : `Quality gate failed: score ${result.score} < threshold ${threshold}`;
+      core.setFailed(failureMessage);
     }
   } catch (error) {
     if (error instanceof Error) {
