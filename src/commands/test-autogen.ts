@@ -26,7 +26,7 @@ const GIT_CANDIDATES = [
   '/usr/bin/git',
   '/usr/local/bin/git',
   '/bin/git',
-  'C:\\Program Files\\Git\\cmd\\git.exe',
+  String.raw`C:\Program Files\Git\cmd\git.exe`,
 ];
 
 function resolveGitBinary(): string {
@@ -197,16 +197,16 @@ function buildTestPath(cwd: string, source: string, scope: TestScope): string {
   const base = stripExtension(source);
 
   if (ext === 'py') {
-    const normalized = base.replace(/\//g, '_');
+    const normalized = base.replaceAll('/', '_');
     return join('tests', scope, `test_${normalized}.py`);
   }
 
-  const suffix =
-    scope === 'unit'
-      ? 'unit.test'
-      : scope === 'integration'
-        ? 'integration.test'
-        : 'e2e.test';
+  let suffix = 'e2e.test';
+  if (scope === 'unit') {
+    suffix = 'unit.test';
+  } else if (scope === 'integration') {
+    suffix = 'integration.test';
+  }
 
   return join('tests', scope, `${base}.${suffix}.${ext}`);
 }

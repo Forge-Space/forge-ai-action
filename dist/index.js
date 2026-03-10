@@ -35777,7 +35777,7 @@ const GIT_CANDIDATES = [
     '/usr/bin/git',
     '/usr/local/bin/git',
     '/bin/git',
-    'C:\\Program Files\\Git\\cmd\\git.exe',
+    String.raw `C:\Program Files\Git\cmd\git.exe`,
 ];
 function resolveGitBinary() {
     for (const candidate of GIT_CANDIDATES) {
@@ -36044,7 +36044,7 @@ const test_autogen_GIT_CANDIDATES = [
     '/usr/bin/git',
     '/usr/local/bin/git',
     '/bin/git',
-    'C:\\Program Files\\Git\\cmd\\git.exe',
+    String.raw `C:\Program Files\Git\cmd\git.exe`,
 ];
 function test_autogen_resolveGitBinary() {
     for (const candidate of test_autogen_GIT_CANDIDATES) {
@@ -36196,14 +36196,16 @@ function buildTestPath(cwd, source, scope) {
     const ext = (0,external_node_path_namespaceObject.extname)(source) === '.py' ? 'py' : testExt(cwd);
     const base = stripExtension(source);
     if (ext === 'py') {
-        const normalized = base.replace(/\//g, '_');
+        const normalized = base.replaceAll('/', '_');
         return (0,external_node_path_namespaceObject.join)('tests', scope, `test_${normalized}.py`);
     }
-    const suffix = scope === 'unit'
-        ? 'unit.test'
-        : scope === 'integration'
-            ? 'integration.test'
-            : 'e2e.test';
+    let suffix = 'e2e.test';
+    if (scope === 'unit') {
+        suffix = 'unit.test';
+    }
+    else if (scope === 'integration') {
+        suffix = 'integration.test';
+    }
     return (0,external_node_path_namespaceObject.join)('tests', scope, `${base}.${suffix}.${ext}`);
 }
 function buildFallbackResult(cwd, baseRef) {
