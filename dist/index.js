@@ -35742,6 +35742,33 @@ function writeReport(report, format, outputPath) {
 const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
 ;// CONCATENATED MODULE: external "node:fs"
 const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+;// CONCATENATED MODULE: ./src/commands/git-utils.ts
+
+const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+const GIT_CANDIDATES = [
+    '/usr/bin/git',
+    '/usr/local/bin/git',
+    '/bin/git',
+    String.raw `C:\Program Files\Git\cmd\git.exe`,
+];
+function sanitizeGitRef(ref) {
+    if (!ref)
+        return undefined;
+    if (!SAFE_GIT_REF.test(ref))
+        return undefined;
+    if (ref.startsWith('-'))
+        return undefined;
+    return ref;
+}
+function resolveGitBinary() {
+    for (const candidate of GIT_CANDIDATES) {
+        if ((0,external_node_fs_namespaceObject.existsSync)(candidate)) {
+            return candidate;
+        }
+    }
+    throw new Error('Git binary not found in expected locations');
+}
+
 ;// CONCATENATED MODULE: ./src/types.ts
 function types_scoreToGrade(score) {
     if (score >= 95)
@@ -35772,30 +35799,6 @@ function types_scoreToGrade(score) {
 
 
 
-const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
-const GIT_CANDIDATES = [
-    '/usr/bin/git',
-    '/usr/local/bin/git',
-    '/bin/git',
-    String.raw `C:\Program Files\Git\cmd\git.exe`,
-];
-function resolveGitBinary() {
-    for (const candidate of GIT_CANDIDATES) {
-        if ((0,external_node_fs_namespaceObject.existsSync)(candidate)) {
-            return candidate;
-        }
-    }
-    throw new Error('Git binary not found in expected locations');
-}
-function sanitizeGitRef(ref) {
-    if (!ref)
-        return undefined;
-    if (!SAFE_GIT_REF.test(ref))
-        return undefined;
-    if (ref.startsWith('-'))
-        return undefined;
-    return ref;
-}
 function hasRef(cwd, ref) {
     try {
         (0,external_node_child_process_namespaceObject.execFileSync)(resolveGitBinary(), ['rev-parse', '--verify', '--quiet', ref], {
@@ -36038,31 +36041,8 @@ const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(impo
 
 
 
-const test_autogen_SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+
 const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const test_autogen_GIT_CANDIDATES = [
-    '/usr/bin/git',
-    '/usr/local/bin/git',
-    '/bin/git',
-    String.raw `C:\Program Files\Git\cmd\git.exe`,
-];
-function test_autogen_resolveGitBinary() {
-    for (const candidate of test_autogen_GIT_CANDIDATES) {
-        if ((0,external_node_fs_namespaceObject.existsSync)(candidate)) {
-            return candidate;
-        }
-    }
-    throw new Error('Git binary not found in expected locations');
-}
-function test_autogen_sanitizeGitRef(ref) {
-    if (!ref)
-        return undefined;
-    if (!test_autogen_SAFE_GIT_REF.test(ref))
-        return undefined;
-    if (ref.startsWith('-'))
-        return undefined;
-    return ref;
-}
 function normalizePhase(input) {
     if (input === 'phase1' || input === 'phase2')
         return input;
@@ -36086,7 +36066,7 @@ function buildCommandArgs(baseRef) {
     return args;
 }
 function resolveBaseRef() {
-    const baseRef = test_autogen_sanitizeGitRef(process.env.GITHUB_BASE_REF);
+    const baseRef = sanitizeGitRef(process.env.GITHUB_BASE_REF);
     if (!baseRef)
         return undefined;
     return `origin/${baseRef}`;
@@ -36125,7 +36105,7 @@ function runGitDiff(cwd, baseRef) {
         ? ['diff', '--name-only', `${baseRef}...HEAD`]
         : ['diff', '--name-only', 'HEAD'];
     try {
-        const output = (0,external_node_child_process_namespaceObject.execFileSync)(test_autogen_resolveGitBinary(), args, {
+        const output = (0,external_node_child_process_namespaceObject.execFileSync)(resolveGitBinary(), args, {
             cwd,
             encoding: 'utf-8',
             stdio: ['ignore', 'pipe', 'ignore'],

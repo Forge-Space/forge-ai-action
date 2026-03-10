@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { extname, join } from 'node:path';
+import { resolveGitBinary, sanitizeGitRef } from './git-utils.js';
 import {
   scoreToGrade,
   type ActionFinding,
@@ -19,31 +20,7 @@ interface RawAutogenResult {
 type PhaseMode = 'warn' | 'phase1' | 'phase2';
 
 type TestScope = 'unit' | 'integration' | 'e2e';
-
-const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
 const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const GIT_CANDIDATES = [
-  '/usr/bin/git',
-  '/usr/local/bin/git',
-  '/bin/git',
-  String.raw`C:\Program Files\Git\cmd\git.exe`,
-];
-
-function resolveGitBinary(): string {
-  for (const candidate of GIT_CANDIDATES) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  throw new Error('Git binary not found in expected locations');
-}
-
-function sanitizeGitRef(ref?: string): string | undefined {
-  if (!ref) return undefined;
-  if (!SAFE_GIT_REF.test(ref)) return undefined;
-  if (ref.startsWith('-')) return undefined;
-  return ref;
-}
 
 function normalizePhase(input?: string): PhaseMode {
   if (input === 'phase1' || input === 'phase2') return input;
