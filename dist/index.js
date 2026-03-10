@@ -35740,6 +35740,8 @@ function writeReport(report, format, outputPath) {
 //# sourceMappingURL=api.js.map
 ;// CONCATENATED MODULE: external "node:child_process"
 const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 ;// CONCATENATED MODULE: ./src/types.ts
 function types_scoreToGrade(score) {
     if (score >= 95)
@@ -35769,7 +35771,22 @@ function types_scoreToGrade(score) {
 
 
 
+
 const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+const GIT_CANDIDATES = [
+    '/usr/bin/git',
+    '/usr/local/bin/git',
+    '/bin/git',
+    'C:\\Program Files\\Git\\cmd\\git.exe',
+];
+function resolveGitBinary() {
+    for (const candidate of GIT_CANDIDATES) {
+        if ((0,external_node_fs_namespaceObject.existsSync)(candidate)) {
+            return candidate;
+        }
+    }
+    throw new Error('Git binary not found in expected locations');
+}
 function sanitizeGitRef(ref) {
     if (!ref)
         return undefined;
@@ -35781,7 +35798,7 @@ function sanitizeGitRef(ref) {
 }
 function hasRef(cwd, ref) {
     try {
-        (0,external_node_child_process_namespaceObject.execFileSync)('git', ['rev-parse', '--verify', '--quiet', ref], {
+        (0,external_node_child_process_namespaceObject.execFileSync)(resolveGitBinary(), ['rev-parse', '--verify', '--quiet', ref], {
             cwd,
             stdio: ['ignore', 'ignore', 'ignore'],
         });
@@ -36014,8 +36031,6 @@ function runMigrateCommand(cwd, threshold) {
     };
 }
 
-;// CONCATENATED MODULE: external "node:fs"
-const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 ;// CONCATENATED MODULE: external "node:path"
 const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 ;// CONCATENATED MODULE: ./src/commands/test-autogen.ts
@@ -36025,6 +36040,20 @@ const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(impo
 
 const test_autogen_SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
 const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const test_autogen_GIT_CANDIDATES = [
+    '/usr/bin/git',
+    '/usr/local/bin/git',
+    '/bin/git',
+    'C:\\Program Files\\Git\\cmd\\git.exe',
+];
+function test_autogen_resolveGitBinary() {
+    for (const candidate of test_autogen_GIT_CANDIDATES) {
+        if ((0,external_node_fs_namespaceObject.existsSync)(candidate)) {
+            return candidate;
+        }
+    }
+    throw new Error('Git binary not found in expected locations');
+}
 function test_autogen_sanitizeGitRef(ref) {
     if (!ref)
         return undefined;
@@ -36096,7 +36125,7 @@ function runGitDiff(cwd, baseRef) {
         ? ['diff', '--name-only', `${baseRef}...HEAD`]
         : ['diff', '--name-only', 'HEAD'];
     try {
-        const output = (0,external_node_child_process_namespaceObject.execFileSync)('git', args, {
+        const output = (0,external_node_child_process_namespaceObject.execFileSync)(test_autogen_resolveGitBinary(), args, {
             cwd,
             encoding: 'utf-8',
             stdio: ['ignore', 'pipe', 'ignore'],

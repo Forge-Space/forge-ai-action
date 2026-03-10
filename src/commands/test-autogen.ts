@@ -22,6 +22,21 @@ type TestScope = 'unit' | 'integration' | 'e2e';
 
 const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
 const NPX_BIN = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const GIT_CANDIDATES = [
+  '/usr/bin/git',
+  '/usr/local/bin/git',
+  '/bin/git',
+  'C:\\Program Files\\Git\\cmd\\git.exe',
+];
+
+function resolveGitBinary(): string {
+  for (const candidate of GIT_CANDIDATES) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  throw new Error('Git binary not found in expected locations');
+}
 
 function sanitizeGitRef(ref?: string): string | undefined {
   if (!ref) return undefined;
@@ -99,7 +114,7 @@ function runGitDiff(cwd: string, baseRef?: string): string[] {
     ? ['diff', '--name-only', `${baseRef}...HEAD`]
     : ['diff', '--name-only', 'HEAD'];
   try {
-    const output = execFileSync('git', args, {
+    const output = execFileSync(resolveGitBinary(), args, {
       cwd,
       encoding: 'utf-8',
       stdio: ['ignore', 'pipe', 'ignore'],

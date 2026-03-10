@@ -1,5 +1,6 @@
 import { scanProject, analyzeDiff } from 'forge-ai-init';
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import {
   scoreToGrade,
   type ActionResult,
@@ -8,6 +9,21 @@ import {
 } from '../types.js';
 
 const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
+const GIT_CANDIDATES = [
+  '/usr/bin/git',
+  '/usr/local/bin/git',
+  '/bin/git',
+  'C:\\Program Files\\Git\\cmd\\git.exe',
+];
+
+function resolveGitBinary(): string {
+  for (const candidate of GIT_CANDIDATES) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  throw new Error('Git binary not found in expected locations');
+}
 
 function sanitizeGitRef(ref?: string): string | undefined {
   if (!ref) return undefined;
@@ -18,7 +34,7 @@ function sanitizeGitRef(ref?: string): string | undefined {
 
 function hasRef(cwd: string, ref: string): boolean {
   try {
-    execFileSync('git', ['rev-parse', '--verify', '--quiet', ref], {
+    execFileSync(resolveGitBinary(), ['rev-parse', '--verify', '--quiet', ref], {
       cwd,
       stdio: ['ignore', 'ignore', 'ignore'],
     });
