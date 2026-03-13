@@ -10,6 +10,15 @@
 - Added tenant profile loader/validator with fail-fast behavior on missing, invalid,
   or mismatched profile data.
 - `test-autogen-check` now forwards tenant context to `forge-ai-init`.
+- Documented tenant contract expectations in README (required inputs + profile
+  availability/match rules).
+
+### Added
+
+- Baseline CI workflow for PR/main:
+  - `npm test`
+  - `tsc --noEmit`
+  - `npm run build`
 
 ### Fixed
 

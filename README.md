@@ -19,6 +19,8 @@ That's it. Every PR gets a quality report with score, delta, findings, and a pas
 
 `tenant_profile_ref` must point to a profile file present in the runner workspace
 (for example, checked out from `Forge-Space/forge-tenant-profiles`).
+The action fails fast when `tenant` is missing, `tenant_profile_ref` is missing/not
+found, or `tenant` does not match `tenant_id` in the profile.
 
 ## Usage
 
