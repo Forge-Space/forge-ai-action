@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## v1.3.0 (2026-03-16)
+
 ### Changed
 
 - Tenant context is now mandatory for all action commands:
@@ -12,6 +14,7 @@
 - `test-autogen-check` now forwards tenant context to `forge-ai-init`.
 - Documented tenant contract expectations in README (required inputs + profile
   availability/match rules).
+- Migrated ESLint config to `eslint.config.ts` with typescript-eslint flat config API.
 
 ### Added
 
