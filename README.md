@@ -152,7 +152,7 @@ hotspots while preserving inline comment support.
 | `tenant_profile_ref` | - | Path to tenant profile file (yaml/json) available in workspace |
 | `command` | `gate` | Command: `gate`, `scan`, `diff`, `assess`, `migrate`, or `test-autogen-check` |
 | `threshold` | `60` | Minimum score (0-100) for gate command |
-| `config` | auto | Path to `.forgerc.json` |
+| `config` | `''` | Reserved no-op placeholder (currently ignored at runtime) |
 | `comment` | `true` | Post PR comment with results |
 | `annotations` | `true` | Add inline file annotations |
 | `test_autogen_phase` | `warn` | Enforcement phase for `test-autogen-check`: `warn`, `phase1`, `phase2` |
@@ -187,17 +187,10 @@ Supports: TypeScript, JavaScript, Python, Go, Rust, Java, Kotlin, Vue, Svelte
 
 ## Configuration
 
-Create `.forgerc.json` in your repo root:
+The `config` input is currently a compatibility placeholder and is ignored at runtime.
 
-```json
-{
-  "preset": "recommended",
-  "rules": {
-    "console-log": { "severity": "off" }
-  },
-  "ignore": ["**/*.test.ts", "dist/**"]
-}
-```
+You can still pass `config` in workflows to preserve forward compatibility, but it does
+not change rule selection, thresholds, or scanner behavior in the current action.
 
 ## How It Works
 

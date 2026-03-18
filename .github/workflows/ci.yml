@@ -15,7 +15,7 @@ jobs:
     uses: Forge-Space/.github/.github/workflows/reusable-node-ci.yml@main
     with:
       node-version: "22"
-      run-lint: false
+      run-lint: true
       run-test: true
       run-typecheck: true
       run-build: false

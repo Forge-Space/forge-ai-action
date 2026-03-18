@@ -1,57 +1,57 @@
-name: 'Forge AI — Quality Gates for AI-Assisted Code'
-description: 'Prevent AI limbo engineering. Quality scanning, PR delta analysis, and governance gates for every pull request.'
-author: 'Forge Space'
+name: "Forge AI — Quality Gates for AI-Assisted Code"
+description: "Prevent AI limbo engineering. Quality scanning, PR delta analysis, and governance gates for every pull request."
+author: "Forge Space"
 
 branding:
-  icon: 'shield'
-  color: 'purple'
+  icon: "shield"
+  color: "purple"
 
 inputs:
   tenant:
-    description: 'Tenant identifier (must match tenant_id in tenant profile)'
+    description: "Tenant identifier (must match tenant_id in tenant profile)"
     required: true
   tenant_profile_ref:
-    description: 'Path to tenant profile file (yaml/json) available in workspace'
+    description: "Path to tenant profile file (yaml/json) available in workspace"
     required: true
   command:
-    description: 'Command to run: gate (default), scan, diff, assess, migrate, test-autogen-check'
+    description: "Command to run: gate (default), scan, diff, assess, migrate, test-autogen-check"
     required: false
-    default: 'gate'
+    default: "gate"
   threshold:
-    description: 'Minimum quality score (0-100). Only used with gate command.'
+    description: "Minimum quality score (0-100). Only used with gate command."
     required: false
-    default: '60'
+    default: "60"
   config:
-    description: 'Path to .forgerc.json config file (auto-detected if omitted)'
+    description: "Reserved no-op placeholder for future config support (currently ignored at runtime)"
     required: false
-    default: ''
+    default: ""
   comment:
-    description: 'Post PR comment with results'
+    description: "Post PR comment with results"
     required: false
-    default: 'true'
+    default: "true"
   annotations:
-    description: 'Add inline file annotations for findings'
+    description: "Add inline file annotations for findings"
     required: false
-    default: 'true'
+    default: "true"
   test_autogen_phase:
-    description: 'Policy phase for test-autogen-check: warn, phase1, or phase2'
+    description: "Policy phase for test-autogen-check: warn, phase1, or phase2"
     required: false
-    default: 'warn'
+    default: "warn"
 
 outputs:
   score:
-    description: 'Quality score (0-100)'
+    description: "Quality score (0-100)"
   delta:
-    description: 'Score change compared to base branch'
+    description: "Score change compared to base branch"
   passed:
-    description: 'Whether the quality gate passed (true/false)'
+    description: "Whether the quality gate passed (true/false)"
   findings-count:
-    description: 'Number of new findings in this PR'
+    description: "Number of new findings in this PR"
   readiness:
-    description: 'Migration readiness: ready, needs-work, or high-risk (assess/migrate only)'
+    description: "Migration readiness: ready, needs-work, or high-risk (assess/migrate only)"
   strategy:
-    description: 'Recommended migration strategy (assess/migrate only)'
+    description: "Recommended migration strategy (assess/migrate only)"
 
 runs:
-  using: 'node20'
-  main: 'dist/index.js'
+  using: "node20"
+  main: "dist/index.js"

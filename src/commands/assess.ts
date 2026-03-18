@@ -1,15 +1,12 @@
-import { assessProject, detectStack } from 'forge-ai-init';
+import { assessProject, detectStack } from "forge-ai-init";
 import {
   scoreToGrade,
   type ActionResult,
   type ActionFinding,
   type CategoryResult,
-} from '../types.js';
+} from "../types.js";
 
-export function runAssessCommand(
-  cwd: string,
-  threshold: number,
-): ActionResult {
+export function runAssessCommand(cwd: string, threshold: number): ActionResult {
   const stack = detectStack(cwd);
   const report = assessProject(cwd, stack);
 
@@ -18,7 +15,7 @@ export function runAssessCommand(
   const passed = score >= threshold;
 
   const findings: ActionFinding[] = report.findings.map((f) => ({
-    file: f.file ?? '',
+    file: f.file ?? "",
     rule: f.title,
     severity: f.severity,
     message: f.detail,
@@ -37,7 +34,7 @@ export function runAssessCommand(
     `Health: ${score}/100 (${grade}). ` +
     `Readiness: ${readiness}. ` +
     `Strategy: ${strategy}. ` +
-    `${findings.length} finding${findings.length === 1 ? '' : 's'}.`;
+    `${findings.length} finding${findings.length === 1 ? "" : "s"}.`;
 
   return {
     score,

@@ -35744,6 +35744,7 @@ const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createReq
 const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
 ;// CONCATENATED MODULE: ./src/commands/git-utils.ts
 
+
 const SAFE_GIT_REF = /^[A-Za-z0-9._/-]+$/;
 const GIT_CANDIDATES = [
     '/usr/bin/git',
@@ -35767,6 +35768,34 @@ function resolveGitBinary() {
         }
     }
     throw new Error('Git binary not found in expected locations');
+}
+function hasRef(cwd, ref) {
+    try {
+        (0,external_node_child_process_namespaceObject.execFileSync)(resolveGitBinary(), ['rev-parse', '--verify', '--quiet', ref], {
+            cwd,
+            stdio: ['ignore', 'ignore', 'ignore'],
+        });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function resolveDiffBase(cwd) {
+    const baseRef = sanitizeGitRef(process.env.GITHUB_BASE_REF);
+    const candidates = [
+        baseRef ? `origin/${baseRef}` : undefined,
+        baseRef,
+        'origin/main',
+        'main',
+        'HEAD~1',
+    ].filter((candidate) => Boolean(candidate));
+    for (const candidate of candidates) {
+        if (hasRef(cwd, candidate)) {
+            return candidate;
+        }
+    }
+    return 'HEAD';
 }
 
 ;// CONCATENATED MODULE: ./src/types.ts
@@ -35798,41 +35827,12 @@ function types_scoreToGrade(score) {
 
 
 
-
-function hasRef(cwd, ref) {
-    try {
-        (0,external_node_child_process_namespaceObject.execFileSync)(resolveGitBinary(), ['rev-parse', '--verify', '--quiet', ref], {
-            cwd,
-            stdio: ['ignore', 'ignore', 'ignore'],
-        });
-        return true;
-    }
-    catch {
-        return false;
-    }
-}
-function resolveDiffBase(cwd) {
-    const baseRef = sanitizeGitRef(process.env.GITHUB_BASE_REF);
-    const candidates = [
-        baseRef ? `origin/${baseRef}` : undefined,
-        baseRef,
-        'origin/main',
-        'main',
-        'HEAD~1',
-    ].filter((candidate) => Boolean(candidate));
-    for (const candidate of candidates) {
-        if (hasRef(cwd, candidate)) {
-            return candidate;
-        }
-    }
-    return 'HEAD';
-}
 function runGateCommand(cwd, threshold) {
     const scan = scanProject(cwd);
     const diff = analyzeDiff(cwd, {
         staged: false,
         base: resolveDiffBase(cwd),
-        head: 'HEAD',
+        head: "HEAD",
     });
     const score = scan.score;
     const grade = types_scoreToGrade(score);
@@ -35847,9 +35847,9 @@ function runGateCommand(cwd, threshold) {
         name: c.category,
         score: Math.max(0, 100 - c.critical * 10 - c.high * 5 - c.count),
     }));
-    const status = passed ? 'Passed' : 'Failed';
+    const status = passed ? "Passed" : "Failed";
     const summary = `Gate ${status} (${score}/${threshold}). ` +
-        `${findings.length} new finding${findings.length === 1 ? '' : 's'}.`;
+        `${findings.length} new finding${findings.length === 1 ? "" : "s"}.`;
     return {
         score,
         grade,
@@ -35879,7 +35879,7 @@ function runScanCommand(cwd) {
         score: Math.max(0, 100 - c.critical * 10 - c.high * 5 - c.count),
     }));
     const summary = `Score: ${score}/100 (${grade}). ` +
-        `${findings.length} finding${findings.length === 1 ? '' : 's'} across ` +
+        `${findings.length} finding${findings.length === 1 ? "" : "s"} across ` +
         `${scan.filesScanned} files.`;
     return {
         score,
@@ -35895,9 +35895,14 @@ function runScanCommand(cwd) {
 ;// CONCATENATED MODULE: ./src/commands/diff.ts
 
 
+
 function runDiffCommand(cwd) {
     const scan = scanProject(cwd);
-    const diff = analyzeDiff(cwd, { staged: false });
+    const diff = analyzeDiff(cwd, {
+        staged: false,
+        base: resolveDiffBase(cwd),
+        head: "HEAD",
+    });
     const score = scan.score;
     const grade = types_scoreToGrade(score);
     const findings = diff.newFindings.map((f) => ({
@@ -35910,11 +35915,11 @@ function runDiffCommand(cwd) {
         name: c.category,
         score: Math.max(0, 100 - c.critical * 10 - c.high * 5 - c.count),
     }));
-    const deltaSign = diff.delta >= 0 ? '+' : '';
-    const trend = diff.improved ? 'improved' : 'degraded';
+    const deltaSign = diff.delta >= 0 ? "+" : "";
+    const trend = diff.improved ? "improved" : "degraded";
     const summary = `Delta: ${deltaSign}${diff.delta} (${trend}). ` +
-        `${diff.changedFiles.length} file${diff.changedFiles.length === 1 ? '' : 's'} changed. ` +
-        `${findings.length} new finding${findings.length === 1 ? '' : 's'}.`;
+        `${diff.changedFiles.length} file${diff.changedFiles.length === 1 ? "" : "s"} changed. ` +
+        `${findings.length} new finding${findings.length === 1 ? "" : "s"}.`;
     return {
         score,
         grade,
@@ -35936,7 +35941,7 @@ function runAssessCommand(cwd, threshold) {
     const grade = types_scoreToGrade(score);
     const passed = score >= threshold;
     const findings = report.findings.map((f) => ({
-        file: f.file ?? '',
+        file: f.file ?? "",
         rule: f.title,
         severity: f.severity,
         message: f.detail,
@@ -35951,7 +35956,7 @@ function runAssessCommand(cwd, threshold) {
     const summary = `Health: ${score}/100 (${grade}). ` +
         `Readiness: ${readiness}. ` +
         `Strategy: ${strategy}. ` +
-        `${findings.length} finding${findings.length === 1 ? '' : 's'}.`;
+        `${findings.length} finding${findings.length === 1 ? "" : "s"}.`;
     return {
         score,
         grade,
@@ -35976,7 +35981,7 @@ function runMigrateCommand(cwd, threshold) {
     const grade = types_scoreToGrade(score);
     const passed = score >= threshold;
     const findings = report.findings.map((f) => ({
-        file: f.file ?? '',
+        file: f.file ?? "",
         rule: f.title,
         severity: f.severity,
         message: f.detail,
@@ -36761,13 +36766,13 @@ function resolveTenantContext(cwd, tenantInput, profileRefInput) {
 
 async function run() {
     try {
-        const command = core.getInput('command') || 'gate';
-        const threshold = parseInt(core.getInput('threshold') || '60', 10);
-        const shouldComment = core.getInput('comment') !== 'false';
-        const shouldAnnotate = core.getInput('annotations') !== 'false';
-        const testAutogenPhase = core.getInput('test_autogen_phase') || 'warn';
+        const command = core.getInput("command") || "gate";
+        const threshold = parseInt(core.getInput("threshold") || "60", 10);
+        const shouldComment = core.getInput("comment") !== "false";
+        const shouldAnnotate = core.getInput("annotations") !== "false";
+        const testAutogenPhase = core.getInput("test_autogen_phase") || "warn";
         const cwd = process.cwd();
-        const tenantContext = resolveTenantContext(cwd, core.getInput('tenant'), core.getInput('tenant_profile_ref'));
+        const tenantContext = resolveTenantContext(cwd, core.getInput("tenant"), core.getInput("tenant_profile_ref"));
         process.env.FORGE_TENANT_ID = tenantContext.tenantId;
         process.env.FORGE_TENANT_PROFILE_REF = tenantContext.profilePath;
         core.info(`Forge AI — running "${command}" command`);
@@ -36775,48 +36780,48 @@ async function run() {
         let result;
         let migrateResult;
         switch (command) {
-            case 'gate':
+            case "gate":
                 result = runGateCommand(cwd, threshold);
                 break;
-            case 'scan':
+            case "scan":
                 result = runScanCommand(cwd);
                 break;
-            case 'diff':
+            case "diff":
                 result = runDiffCommand(cwd);
                 break;
-            case 'assess':
+            case "assess":
                 result = runAssessCommand(cwd, threshold);
                 break;
-            case 'migrate':
+            case "migrate":
                 migrateResult = runMigrateCommand(cwd, threshold);
                 result = migrateResult;
                 break;
-            case 'test-autogen-check':
+            case "test-autogen-check":
                 result = runTestAutogenCheckCommand(cwd, testAutogenPhase, tenantContext.tenantId, tenantContext.profilePath);
                 break;
             default:
                 core.setFailed(`Unknown command: ${command}`);
                 return;
         }
-        core.setOutput('score', result.score.toString());
-        core.setOutput('delta', result.delta.toString());
-        core.setOutput('passed', result.passed.toString());
-        core.setOutput('findings-count', result.findings.length.toString());
+        core.setOutput("score", result.score.toString());
+        core.setOutput("delta", result.delta.toString());
+        core.setOutput("passed", result.passed.toString());
+        core.setOutput("findings-count", result.findings.length.toString());
         if (result.migrationReadiness) {
-            core.setOutput('readiness', result.migrationReadiness);
+            core.setOutput("readiness", result.migrationReadiness);
         }
         if (result.migrationStrategy) {
-            core.setOutput('strategy', result.migrationStrategy);
+            core.setOutput("strategy", result.migrationStrategy);
         }
         core.info(`Score: ${result.score}/100 (${result.grade})`);
-        core.info(`Delta: ${result.delta >= 0 ? '+' : ''}${result.delta}`);
-        core.info(`Gate: ${result.passed ? 'PASSED' : 'FAILED'}`);
+        core.info(`Delta: ${result.delta >= 0 ? "+" : ""}${result.delta}`);
+        core.info(`Gate: ${result.passed ? "PASSED" : "FAILED"}`);
         core.info(`Findings: ${result.findings.length}`);
         if (result.migrationReadiness) {
             core.info(`Migration Readiness: ${result.migrationReadiness}`);
             core.info(`Strategy: ${result.migrationStrategy}`);
         }
-        const token = process.env.GITHUB_TOKEN || core.getInput('token');
+        const token = process.env.GITHUB_TOKEN || core.getInput("token");
         const context = github.context;
         const isPR = !!context.payload.pull_request;
         if (isPR && token) {
@@ -36834,7 +36839,7 @@ async function run() {
             }
         }
         if (!result.passed) {
-            const failureMessage = command === 'test-autogen-check'
+            const failureMessage = command === "test-autogen-check"
                 ? `Test autogen check failed: ${result.summary}`
                 : `Quality gate failed: score ${result.score} < threshold ${threshold}`;
             core.setFailed(failureMessage);
@@ -36845,7 +36850,7 @@ async function run() {
             core.setFailed(error.message);
         }
         else {
-            core.setFailed('An unexpected error occurred');
+            core.setFailed("An unexpected error occurred");
         }
     }
 }
