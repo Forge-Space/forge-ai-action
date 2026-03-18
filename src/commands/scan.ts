@@ -1,10 +1,10 @@
-import { scanProject } from 'forge-ai-init';
+import { scanProject } from "forge-ai-init";
 import {
   scoreToGrade,
   type ActionResult,
   type ActionFinding,
   type CategoryResult,
-} from '../types.js';
+} from "../types.js";
 
 export function runScanCommand(cwd: string): ActionResult {
   const scan = scanProject(cwd);
@@ -26,7 +26,7 @@ export function runScanCommand(cwd: string): ActionResult {
 
   const summary =
     `Score: ${score}/100 (${grade}). ` +
-    `${findings.length} finding${findings.length === 1 ? '' : 's'} across ` +
+    `${findings.length} finding${findings.length === 1 ? "" : "s"} across ` +
     `${scan.filesScanned} files.`;
 
   return {

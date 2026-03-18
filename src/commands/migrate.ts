@@ -1,14 +1,10 @@
-import {
-  assessProject,
-  detectStack,
-  analyzeMigration,
-} from 'forge-ai-init';
+import { assessProject, detectStack, analyzeMigration } from "forge-ai-init";
 import {
   scoreToGrade,
   type ActionResult,
   type ActionFinding,
   type CategoryResult,
-} from '../types.js';
+} from "../types.js";
 
 export interface MigrateResult extends ActionResult {
   migrationPlan: {
@@ -54,7 +50,7 @@ export function runMigrateCommand(
   const passed = score >= threshold;
 
   const findings: ActionFinding[] = report.findings.map((f) => ({
-    file: f.file ?? '',
+    file: f.file ?? "",
     rule: f.title,
     severity: f.severity,
     message: f.detail,
