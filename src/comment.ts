@@ -1,7 +1,12 @@
-import type { GitHub } from '@actions/github/lib/utils.js';
-import type { Context } from '@actions/github/lib/context.js';
+import type {
+  context as githubContext,
+  getOctokit,
+} from '@actions/github';
 import type { ActionResult } from './types.js';
 import type { MigrateResult } from './commands/migrate.js';
+
+type Octokit = ReturnType<typeof getOctokit>;
+type Context = typeof githubContext;
 
 const COMMENT_MARKER = '<!-- forge-ai-action -->';
 
@@ -103,7 +108,7 @@ function severityBadge(severity: string): string {
 }
 
 export async function postComment(
-  octokit: InstanceType<typeof GitHub>,
+  octokit: Octokit,
   context: Context,
   result: ActionResult,
 ): Promise<void> {
@@ -322,7 +327,7 @@ function gradeFromScore(score: number): string {
 }
 
 export async function postMigrateComment(
-  octokit: InstanceType<typeof GitHub>,
+  octokit: Octokit,
   context: Context,
   result: MigrateResult,
 ): Promise<void> {

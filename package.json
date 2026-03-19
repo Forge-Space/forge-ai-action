@@ -26,8 +26,8 @@
   "author": "Forge Space",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/github": "^6.0.0",
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0",
     "forge-ai-init": "^0.20.0"
   },
   "devDependencies": {
