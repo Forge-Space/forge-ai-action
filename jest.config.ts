@@ -17,6 +17,8 @@ const config: Config = {
     ],
   },
   testMatch: ['**/__tests__/**/*.test.ts'],
+  collectCoverageFrom: ['src/**/*.ts'],
+  coverageReporters: ['text', 'lcov', 'json-summary'],
 };
 
 export default config;
