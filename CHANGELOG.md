@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+### Added
+
+- Comprehensive test suite to improve code coverage from 52.5% to 71.5%:
+  - Tests for all command handlers (gate, scan, diff, assess, migrate)
+  - Tests for git utilities (ref sanitization, binary resolution, diff base detection)
+  - Tests for comment builders (regular and migration assessment comments)
+  - Tests for severity badge rendering and message formatting
+
+
+- Comprehensive test suite to improve code coverage from 52.5% to 71.5%:
+  - Tests for all command handlers (gate, scan, diff, assess, migrate)
+  - Tests for git utilities (ref sanitization, binary resolution, diff base detection)
+  - Tests for comment builders (regular and migration assessment comments)
+  - Tests for severity badge rendering and message formatting
+
 ## v1.3.0 (2026-03-16)
 
 ### Changed
